@@ -1,5 +1,7 @@
 #include "Scene_Menu.h"
 #include "Scene_Home_Map.h"
+#include "Scene_Level_Editor.h"
+#include "Scene_Options_Menu.h"
 #include "Assets.h"
 #include "GameEngine.h"
 #include "Components.h"
@@ -17,9 +19,11 @@ void Scene_Menu::init()
 {
 	m_title = "Simple Rimworld";
 	m_menuStrings.push_back("Start");
+	m_menuStrings.push_back("Level Editor");
 	m_menuStrings.push_back("Options");
 
 	m_levelPaths.push_back("map_home.txt");
+	m_levelPaths.push_back("level_editor.txt");
 
 	m_menuText.setFont(m_game->assets().getFont("Tech"));
 
@@ -45,7 +49,18 @@ void Scene_Menu::sDoAction(const Action& action)
 	{
 		if (action.name() == "PLAY")
 		{
-			m_game->changeScene("PLAY", std::make_shared<Scene_Home_Map>(m_game, m_levelPaths[m_selectedMenuIndex]));
+			if (m_menuStrings[m_selectedMenuIndex] == "Start")
+			{
+				m_game->changeScene("PLAY", std::make_shared<Scene_Home_Map>(m_game, m_levelPaths[m_selectedMenuIndex]));
+			}
+			else if (m_menuStrings[m_selectedMenuIndex] == "Level Editor")
+			{
+				m_game->changeScene("EDITOR", std::make_shared<Scene_Level_Editor>(m_game, m_levelPaths[m_selectedMenuIndex]));
+			}
+			else if (m_menuStrings[m_selectedMenuIndex] == "Options")
+			{
+				m_game->changeScene("OPTIONS", std::make_shared<Scene_Options_Menu>(m_game, m_levelPaths[m_selectedMenuIndex]));
+			}
 		}
 		else if (action.name() == "UP")
 		{

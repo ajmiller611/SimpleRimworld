@@ -34,7 +34,9 @@
     <ClCompile Include="Physics.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Scene_Home_Map.cpp" />
+    <ClCompile Include="Scene_Level_Editor.cpp" />
     <ClCompile Include="Scene_Menu.cpp" />
+    <ClCompile Include="Scene_Options_Menu.cpp" />
     <ClCompile Include="Vec2.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -57,7 +59,9 @@
     <ClInclude Include="Physics.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Scene_Home_Map.h" />
+    <ClInclude Include="Scene_Level_Editor.h" />
     <ClInclude Include="Scene_Menu.h" />
+    <ClInclude Include="Scene_Options_Menu.h" />
     <ClInclude Include="Vec2.h" />
   </ItemGroup>
   <ItemGroup>
