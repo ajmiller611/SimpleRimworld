@@ -67,9 +67,6 @@
     <Text Include="techfont\LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="README.md" />
-  </ItemGroup>
-  <ItemGroup>
     <Image Include="techfont\Techfont.png" />
   </ItemGroup>
   <ItemGroup>

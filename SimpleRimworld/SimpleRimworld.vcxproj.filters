@@ -147,9 +147,6 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <None Include="README.md" />
-  </ItemGroup>
-  <ItemGroup>
     <Font Include="techfont\Techfont.ttf">
       <Filter>techfont</Filter>
     </Font>
