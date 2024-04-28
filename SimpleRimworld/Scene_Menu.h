@@ -16,6 +16,7 @@ protected:
 	std::vector<std::string> m_levelPaths;
 	std::vector<std::string> m_musicPaths;
 	sf::Text                 m_menuText;
+	sf::RectangleShape       m_menuTextBackground;
 	size_t                   m_selectedMenuIndex = 0;
 
 	void init();

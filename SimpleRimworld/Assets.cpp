@@ -12,8 +12,6 @@ void Assets::loadFromFile(const std::string& path)
 {
 	std::ifstream file(path);
 	std::string str;
-	std::cout << file.good();
-	std::cout << system("dir");
 	while (file.good())
 	{
 		file >> str;
