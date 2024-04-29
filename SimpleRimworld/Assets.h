@@ -13,6 +13,8 @@ class Assets
 	std::map<std::string, std::string>	   m_musicMap;
 
 	void addTexture(const std::string& textureName, const std::string& path, bool smooth = true);
+	bool isTileEmpty(const sf::Image& tileImage, int tileSize);
+	void processTilesheet(const std::string& tilesheetName, const std::string& path, std::vector<std::string>& tileNames);
 	void addAnimation(const std::string& animationName, const std::string& textureName, size_t frameCount, size_t speed);
 	void addFont(const std::string& fontName, const std::string& path);
 	void addSound(const std::string& soundName, const std::string& path);

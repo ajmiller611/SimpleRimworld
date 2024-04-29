@@ -1,6 +1,7 @@
 #include "Assets.h"
 #include <cassert>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 
 Assets::Assets()
@@ -21,6 +22,38 @@ void Assets::loadFromFile(const std::string& path)
 			std::string name, path;
 			file >> name >> path;
 			addTexture(name, path);
+		}
+		else if (str == "Tilesheet")
+		{
+			std::string name, path, line;
+			std::vector<std::string> tileNames;
+			file >> name >> path;
+
+			// In assets.txt, all the names of each tile is defined on a single line. Since the number
+			// of tiles a tilesheet has can vary, we can't read in a single name at a time. Instead,
+			// get the whole line as a string and process that string.
+			std::getline(file, line);
+
+			// Get rid of any spaces in the beginning of the string until we find the first non-space character.
+			for (auto iter = line.begin(); iter < line.end(); ++iter)
+			{
+				if (*(iter) == ' ')
+				{
+					line.erase(iter);
+					++iter;
+				}
+				else { break; }
+			}
+
+			// Seperate the string into substrings by a space character seperator.
+			std::stringstream ss(line);
+			while (std::getline(ss, str, ' '))
+			{
+				tileNames.push_back(str);
+			}
+
+			// Send the tilesheet file and the names to be processed into individual tiles.
+			processTilesheet(name, path, tileNames);
 		}
 		else if (str == "Animation")
 		{
@@ -72,6 +105,65 @@ const sf::Texture& Assets::getTexture(const std::string& textureName) const
 {
 	assert(m_textureMap.find(textureName) != m_textureMap.end());
 	return m_textureMap.at(textureName);
+}
+
+bool Assets::isTileEmpty(const sf::Image& tileImage, int tileSize)
+{
+	for (int x = 0; x < tileSize; ++x)
+	{
+		for (int y = 0; y < tileSize; ++y)
+		{
+			if (tileImage.getPixel(x, y).a != 0)
+			{
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+void Assets::processTilesheet(const std::string& tilesheetName, const std::string& path, std::vector<std::string>& tileNames)
+{
+	sf::Image tilesheet;
+	if (!tilesheet.loadFromFile(path))
+	{
+		std::cerr << "Could not load tilesheet: " << path << std::endl;
+	}
+	else
+	{
+		const int numberOfRows = tilesheet.getSize().y / 64.0f;
+		const int numberOfColumns = tilesheet.getSize().x / 64.0f;
+
+		// Initialize the tile object
+		sf::Image tile;
+		tile.create(64, 64);
+
+		int tileNameIndex = 0;
+		for (size_t c = 0; c < numberOfColumns; ++c)
+		{
+			for (size_t r = 0; r < numberOfRows; ++r)
+			{
+				// Create a rect at the position the tile exists on the tilesheet
+				sf::IntRect tileRect(c * 64, r * 64, 64, 64);
+
+				// Copy the pixels in the subregion defined by the sf::IntRect.
+				// SFML documentation says this is a slow pixel copy so will look to optimze in the future.
+				// Since tilesheets are not always symmetrical with their grid, that can leave empty space in the tilesheet.
+				// sf::Image has a function to get a pixel at a position so we are using that function to ignore empty space.
+				// For this reason, sf::Image is used over sf::Texture.
+				tile.copy(tilesheet, 0, 0, tileRect);
+				
+				if (!isTileEmpty(tile, 64))
+				{
+					// Create a texture from the sf::Image to create a tile usable by the animation system.
+					sf::Texture texTile;
+					texTile.loadFromImage(tile);
+					m_textureMap[tileNames[tileNameIndex]] = texTile;
+					++tileNameIndex;
+				}
+			}
+		}
+	}
 }
 
 void Assets::addAnimation(const std::string& animationName, const std::string& textureName, size_t frameCount, size_t speed)
