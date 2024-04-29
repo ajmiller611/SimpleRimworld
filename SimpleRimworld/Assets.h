@@ -11,9 +11,10 @@ class Assets
 	std::map<std::string, sf::SoundBuffer> m_soundBufferMap;
 	std::map<std::string, sf::Sound>       m_soundMap;
 	std::map<std::string, std::string>	   m_musicMap;
+	Vec2								   m_tileSize = { 64, 64 };
 
 	void addTexture(const std::string& textureName, const std::string& path, bool smooth = true);
-	bool isTileEmpty(const sf::Image& tileImage, int tileSize);
+	bool isTileEmpty(const sf::Image& tileImage, Vec2& tileSize);
 	void processTilesheet(const std::string& tilesheetName, const std::string& path, std::vector<std::string>& tileNames);
 	void addAnimation(const std::string& animationName, const std::string& textureName, size_t frameCount, size_t speed);
 	void addFont(const std::string& fontName, const std::string& path);

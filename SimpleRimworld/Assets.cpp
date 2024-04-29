@@ -107,11 +107,11 @@ const sf::Texture& Assets::getTexture(const std::string& textureName) const
 	return m_textureMap.at(textureName);
 }
 
-bool Assets::isTileEmpty(const sf::Image& tileImage, int tileSize)
+bool Assets::isTileEmpty(const sf::Image& tileImage, Vec2& tileSize)
 {
-	for (int x = 0; x < tileSize; ++x)
+	for (int x = 0; x < tileSize.x; ++x)
 	{
-		for (int y = 0; y < tileSize; ++y)
+		for (int y = 0; y < tileSize.y; ++y)
 		{
 			if (tileImage.getPixel(x, y).a != 0)
 			{
@@ -131,12 +131,12 @@ void Assets::processTilesheet(const std::string& tilesheetName, const std::strin
 	}
 	else
 	{
-		const int numberOfRows = tilesheet.getSize().y / 64.0f;
-		const int numberOfColumns = tilesheet.getSize().x / 64.0f;
+		const int numberOfRows = (int)(tilesheet.getSize().y / m_tileSize.y);
+		const int numberOfColumns = (int)(tilesheet.getSize().x / m_tileSize.x);
 
 		// Initialize the tile object
 		sf::Image tile;
-		tile.create(64, 64);
+		tile.create((unsigned int)m_tileSize.x, (unsigned int)m_tileSize.y);
 
 		int tileNameIndex = 0;
 		for (size_t c = 0; c < numberOfColumns; ++c)
@@ -144,7 +144,7 @@ void Assets::processTilesheet(const std::string& tilesheetName, const std::strin
 			for (size_t r = 0; r < numberOfRows; ++r)
 			{
 				// Create a rect at the position the tile exists on the tilesheet
-				sf::IntRect tileRect(c * 64, r * 64, 64, 64);
+				sf::IntRect tileRect((int)(c * m_tileSize.x), (int)(r * m_tileSize.y), (int)m_tileSize.x, (int)m_tileSize.y);
 
 				// Copy the pixels in the subregion defined by the sf::IntRect.
 				// SFML documentation says this is a slow pixel copy so will look to optimze in the future.
@@ -153,7 +153,7 @@ void Assets::processTilesheet(const std::string& tilesheetName, const std::strin
 				// For this reason, sf::Image is used over sf::Texture.
 				tile.copy(tilesheet, 0, 0, tileRect);
 				
-				if (!isTileEmpty(tile, 64))
+				if (!isTileEmpty(tile, m_tileSize))
 				{
 					// Create a texture from the sf::Image to create a tile usable by the animation system.
 					sf::Texture texTile;
