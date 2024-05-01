@@ -1,4 +1,5 @@
 #include "Assets.h"
+#include "MemoryMapping.h"
 #include <cassert>
 #include <fstream>
 #include <sstream>
@@ -11,80 +12,58 @@ Assets::Assets()
 
 void Assets::loadFromFile(const std::string& path)
 {
-	std::ifstream file(path);
-	std::string str;
-	while (file.good())
+	MemoryMapping mm(path);
+	char* fileData = mm.getData();
+	std::stringstream fileContentStream(fileData);
+	std::string line, token, identifier;
+	std::vector<std::string> tempVector;
+
+	std::stringstream lineStream;
+	while (getline(fileContentStream, line))
 	{
-		file >> str;
-
-		if (str == "Texture")
+		// proccess each line
+		lineStream.str(line);
+		while (lineStream >> token)
 		{
-			std::string name, path;
-			file >> name >> path;
-			addTexture(name, path);
-		}
-		else if (str == "Tilesheet")
-		{
-			std::string name, path, line;
-			std::vector<std::string> tileNames;
-			file >> name >> path;
-
-			// In assets.txt, all the names of each tile is defined on a single line. Since the number
-			// of tiles a tilesheet has can vary, we can't read in a single name at a time. Instead,
-			// get the whole line as a string and process that string.
-			std::getline(file, line);
-
-			// Get rid of any spaces in the beginning of the string until we find the first non-space character.
-			for (auto iter = line.begin(); iter < line.end(); ++iter)
+			if (token == "Tilesheet" ||
+				token == "Texture" ||
+				token == "Animation" ||
+				token == "Font")
 			{
-				if (*(iter) == ' ')
-				{
-					line.erase(iter);
-					++iter;
-				}
-				else { break; }
+				identifier = token;
+				continue;
 			}
+			tempVector.push_back(token);
+		}
 
-			// Seperate the string into substrings by a space character seperator.
-			std::stringstream ss(line);
-			while (std::getline(ss, str, ' '))
-			{
-				tileNames.push_back(str);
-			}
+		// clear the stream to be able to reuse it
+		lineStream.clear();
+		
+		// Since the asset.txt file has a specification for how it it structured, the order of the data stays the same.
+		// This means we can specify the index and always get the correct data. E.g. The identifier for what kind of
+		// assets that line represents is always the first string.
 
-			// Send the tilesheet file and the names to be processed into individual tiles.
-			processTilesheet(name, path, tileNames);
-		}
-		else if (str == "Animation")
+			 if (identifier == "Tilesheet") { processTilesheet(tempVector[0], tempVector[1], tempVector); }
+		else if (identifier == "Texture")	{ addTexture(tempVector[0], tempVector[1]); }
+		else if (identifier == "Animation")
 		{
-			std::string name, texture;
-			size_t frames, speed;
-			file >> name >> texture >> frames >> speed;
-			addAnimation(name, texture, frames, speed);
+			// std::istringstream can be used to store the input strings into a different data type
+			std::istringstream iss(tempVector[2]);
+			size_t frameCount, interval;
+			iss >> frameCount;
+			iss.str(tempVector[3]);
+			iss >> interval;
+			addAnimation(tempVector[0], tempVector[1], frameCount, interval);
+			iss.clear();
 		}
-		else if (str == "Font")
-		{
-			std::string name, path;
-			file >> name >> path;
-			addFont(name, path);
-		}
-		else if (str == "Sound")
-		{
-			std::string name, path;
-			file >> name >> path;
-			addSound(name, path);
-		}
-		else if (str == "Music")
-		{
-			std::string name, path;
-			file >> name >> path;
-			addMusic(name, path);
-		}
-		else
-		{
-			std::cerr << "Unknown Asset Type: " << str << std::endl;
-		}
+		else if (identifier == "Font")		{ addFont(tempVector[0], tempVector[1]); }
+
+		// clear vector for next line's data
+		tempVector.clear();
 	}
+
+	// clean up for memory mapping
+	mm.close();
 }
 
 void Assets::addTexture(const std::string& textureName, const std::string& path, bool smooth)
@@ -138,7 +117,7 @@ void Assets::processTilesheet(const std::string& tilesheetName, const std::strin
 		sf::Image tile;
 		tile.create((unsigned int)m_tileSize.x, (unsigned int)m_tileSize.y);
 
-		int tileNameIndex = 0;
+		int tileNameIndex = 2;
 		for (size_t c = 0; c < numberOfColumns; ++c)
 		{
 			for (size_t r = 0; r < numberOfRows; ++r)
