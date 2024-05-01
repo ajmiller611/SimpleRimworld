@@ -68,6 +68,7 @@
     <Text Include="assets.txt" />
     <Text Include="config.txt" />
     <Text Include="map_home.txt" />
+    <Text Include="README.txt" />
     <Text Include="techfont\LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
