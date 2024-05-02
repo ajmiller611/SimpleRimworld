@@ -3,9 +3,12 @@
 #include "GameEngine.h"
 #include "Action.h"
 #include "Components.h"
+#include "Physics.h"
 
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <sstream>
 
 Scene_Level_Editor::Scene_Level_Editor(GameEngine* gameEngine, const std::string& levelPath)
 	: Scene(gameEngine)
@@ -27,10 +30,27 @@ void Scene_Level_Editor::init()
 	registerAction(sf::Keyboard::A, "LEFT");
 	registerAction(sf::Keyboard::D, "RIGHT");
 	registerAction(sf::Keyboard::Escape, "QUIT");
+
+	std::ifstream file("config.txt");
+	std::string str;
+	while (file.good())
+	{
+		file >> str;
+		if (str == "EntityTypes")
+		{
+			getline(file, str);
+			std::stringstream ss(str);
+			std::string token;
+			while (ss >> token) { m_entityTypes.push_back(token); }
+		}
+	}
 }
 
 void Scene_Level_Editor::update()
 {
+	m_entityManager.update();
+
+	sDragAndDrop();
 	sGui();
 }
 
@@ -39,8 +59,23 @@ void Scene_Level_Editor::onEnd()
 	m_game->changeScene("Menu", nullptr, true);
 }
 
+Vec2 Scene_Level_Editor::windowToWorld(const Vec2& window) const
+{
+	auto& view = m_game->window().getView();
+
+	float wx = view.getCenter().x - (m_game->window().getSize().x / 2.0f);
+	float wy = view.getCenter().y - (m_game->window().getSize().y / 2.0f);
+
+	return Vec2(window.x + wx, window.y + wy);
+}
+
 void Scene_Level_Editor::sDoAction(const Action& action)
 {
+	if (action.name() == "MOUSE_MOVE")
+	{
+		m_mousePos = action.pos();
+	}
+
 	if (action.type() == "START")
 	{
 		if (action.name() == "UP")
@@ -62,9 +97,36 @@ void Scene_Level_Editor::sDoAction(const Action& action)
 		else if (action.name() == "TOGGLE_TEXTURE") { m_drawTextures = !m_drawTextures; }
 		else if (action.name() == "TOGGLE_COLLISION") { m_drawCollision = !m_drawCollision; }
 		else if (action.name() == "TOGGLE_GRID") { m_drawGrid = !m_drawGrid; }
-		else if (action.name() == "QUIT")
+		else if (action.name() == "QUIT") { onEnd(); }
+
+
+		else if (action.name() == "LEFT_CLICK")
 		{
-			onEnd();
+			Physics phy;
+			for (auto& e : m_entityManager.getEntities())
+			{
+				Vec2 wPos = windowToWorld(m_mousePos);
+				if (phy.IsInside(wPos, e))
+				{
+					if (!e->has<CDraggable>()) { continue; }
+
+					auto& dragging = e->get<CDraggable>().dragging;
+					dragging = !dragging;
+				}
+			}
+		}
+		
+	}
+}
+
+void Scene_Level_Editor::sDragAndDrop()
+{
+	for (auto& e : m_entityManager.getEntities())
+	{
+		if (e->has<CDraggable>() && e->get<CDraggable>().dragging)
+		{
+			Vec2 wPos = windowToWorld(m_mousePos);
+			e->get<CTransform>().pos = wPos;
 		}
 	}
 }
@@ -89,13 +151,44 @@ void Scene_Level_Editor::sGui()
 		}
 		if (ImGui::BeginTabItem("Animations"))
 		{
+			combo_preview_value = m_entityTypes[selected_index].c_str();
+			if (ImGui::BeginCombo("Type", combo_preview_value))
+			{
+				for (size_t n = 0; n < m_entityTypes.size(); ++n)
+				{
+					const bool is_selected = (selected_index == n);
+					if (ImGui::Selectable(m_entityTypes[n].c_str(), is_selected))
+					{
+						selected_index = n;
+					}
+					if (is_selected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+			ImGui::Checkbox("Block Movement", &m_blockMoveCheckbox);
+			ImGui::SameLine();
+			ImGui::Checkbox("Block Vision", &m_blockVisionCheckbox);
+			ImGui::SliderInt("Bounding Box Width", &m_boundingBoxWidth, 0, m_gridSize.x);
+			ImGui::SliderInt("Bounding Box Height", &m_boundingBoxHeight, 0, m_gridSize.y);
+
+
+
 			int count = 0;
 			for (const auto& [name, anim] : m_game->assets().getAnimations())
 			{
 				count++;
-				if (ImGui::ImageButton("id", anim.getSprite(), sf::Vector2f(32, 32)))
+				if (ImGui::ImageButton(("id##" + std::to_string(count)).c_str(), anim.getSprite(), sf::Vector2f(32, 32)))
 				{
-
+					auto entity = m_entityManager.addEntity(m_entityTypes[selected_index]);
+					entity->add<CAnimation>(anim, true);
+					auto wPos = windowToWorld(m_mousePos);
+					entity->add<CTransform>(wPos);
+					entity->add<CBoundingBox>(Vec2(m_boundingBoxWidth, m_boundingBoxHeight), m_blockMoveCheckbox, m_blockVisionCheckbox);
+					entity->add<CDraggable>().dragging = true;
 				}
 				if (count % 6 != 0)
 				{
@@ -214,6 +307,13 @@ void Scene_Level_Editor::sGui()
 void Scene_Level_Editor::sRender()
 {
 	m_game->window().clear(sf::Color::Black);
+
+	m_mouseDot.setFillColor(sf::Color::Red);
+	m_mouseDot.setRadius(8);
+	m_mouseDot.setOrigin(8, 8);
+	Vec2 worldPos = windowToWorld(m_mousePos);
+	m_mouseDot.setPosition(worldPos.x, worldPos.y);
+	m_game->window().draw(m_mouseDot);
 
 	if (m_drawTextures)
 	{

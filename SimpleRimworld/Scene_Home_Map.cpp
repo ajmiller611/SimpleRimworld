@@ -31,7 +31,7 @@ void Scene_Home_Map::loadLevel(const std::string& filename)
 
 std::shared_ptr<Entity> Scene_Home_Map::player()
 {
-	
+	return nullptr;
 }
 
 void Scene_Home_Map::spawnPlayer()

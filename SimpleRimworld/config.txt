@@ -1,1 +1,2 @@
 Window 1280 768 60
+EntityTypes Tile Decoration Enemy Projectile Weapon NPC Player

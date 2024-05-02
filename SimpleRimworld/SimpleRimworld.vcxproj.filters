@@ -78,6 +78,9 @@
     <ClCompile Include="Scene_Options_Menu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MemoryMapping.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Action.h">
@@ -149,6 +152,9 @@
     <ClInclude Include="Scene_Options_Menu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MemoryMapping.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="assets.txt" />
@@ -157,6 +163,7 @@
     <Text Include="techfont\LICENSE.txt">
       <Filter>techfont</Filter>
     </Text>
+    <Text Include="README.txt" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="techfont\Techfont.ttf">
