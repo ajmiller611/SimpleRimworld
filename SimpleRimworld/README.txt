@@ -47,16 +47,21 @@ Map Scene Specification:
 ---------------------------------------------------------------------------------------------------------
 
 Tile:
-Tile N GX GY
+Tile N GX GY BX BY OX OY BW BH BM BV
 	Animation Name		N			std::string (no spaces)
 	Grid X Position		GX			float
 	Grid Y Position		GY			float
+	Bounding Box Pos	BX BY		float
+	Bounding Box Offset	OX OY		float
+	Bounding Box Size	BW BH		float
+	Block Move			BM			bool
+	Block Vision		BM			bool
 
 Decoration:
-Decoration N X Y
+Decoration N GX GY
 	Animation Name		N			std::string (no spaces)
-	X Position			X			float
-	Y Position			Y			float
+	Grid X Position		X			float
+	Grid Y Position		Y			float
 
 Controlled Character:
 Player X Y BW BH S H

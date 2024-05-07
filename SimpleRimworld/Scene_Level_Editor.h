@@ -32,6 +32,7 @@ protected:
 	void init();
 	Vec2 windowToWorld(const Vec2& window) const;
 	void update();
+	bool saveToFile(const char* filename);
 	void onEnd();
 	void sDoAction(const Action& action);
 	void sDragAndDrop();

@@ -64,6 +64,38 @@ void Scene_Level_Editor::update()
 	sGui();
 }
 
+bool Scene_Level_Editor::saveToFile(const char* filename)
+{
+	std::string fileName = filename;
+	std::ofstream out(fileName + ".txt");
+	if (out.good())
+	{
+		for (auto& e : m_entityManager.getEntities())
+		{
+			out << e->tag() << " " << e->get<CAnimation>().animation.getName() << " ";
+			auto& transform = e->get<CTransform>();
+			auto& boundingBox = e->get<CBoundingBox>();
+
+			int gridX = transform.pos.x / m_gridSize.x;
+			int gridY = transform.pos.x / m_gridSize.y;
+			out << gridX << " " << gridY << " ";
+			
+			if (e->tag() != "Decoration")
+			{
+				out << boundingBox.pos.x << " " << boundingBox.pos.y << " "
+					<< boundingBox.offset.x << " " << boundingBox.offset.y << " "
+					<< boundingBox.size.x << " " << boundingBox.size.y << " "
+					<< boundingBox.blockMove << " " << boundingBox.blockVision;
+			}
+			out << std::endl;
+		}
+		out.close();
+		return true;
+	}
+	out.close();
+	return false;
+}
+
 void Scene_Level_Editor::onEnd()
 {
 	m_game->changeScene("Menu", std::make_shared<Scene_Menu>(m_game), true);
@@ -204,6 +236,16 @@ void Scene_Level_Editor::sGui()
 			ImGui::Checkbox("Draw Textures", &m_drawTextures);
 			ImGui::Checkbox("Draw Debug", &m_drawCollision);
 
+			ImGui::Separator();
+
+			static char filename[32];
+			ImGui::InputText("File name", filename, 32);
+
+			if (ImGui::Button("Save Level")) 
+			{
+				saveToFile(filename);
+			}
+
 			ImGui::EndTabItem();
 		}
 		if (ImGui::BeginTabItem("Animations"))
@@ -218,8 +260,6 @@ void Scene_Level_Editor::sGui()
 				{
 					if (ImGui::ImageButton("selectArea", m_animationSelected.getSprite(), sf::Vector2f(m_gridSize.x, m_gridSize.y)))
 					{
-						// create the entity and set the draggable component to true so the drag and drop system
-						// can starting dragging the entity
 						if (m_entityBeingDragged == nullptr)
 						{
 							auto entity = m_entityManager.addEntity(m_entityTypes[m_animTypeComboSelectedIndex]);
@@ -227,20 +267,25 @@ void Scene_Level_Editor::sGui()
 							auto wPos = windowToWorld(m_mousePos);
 							entity->add<CTransform>(wPos);
 
-							// Calculate the position and the offset of the bounding box. The offset is from the entity's origin.
-							// Start with getting the entity's top left position to use it to calculate the bounding box's top left position.
-							Vec2 entityTopLeft(wPos.x - (m_gridSize.x / 2), wPos.y - (m_gridSize.y / 2));
-							Vec2 bbTopLeft(entityTopLeft.x + m_boundingBoxLeft, entityTopLeft.y + m_boundingBoxTop);
+							// Decoration entity types won't have a bounding box
+							if (m_entityTypes[m_animTypeComboSelectedIndex] != "Decoration")
+							{
+								// Calculate the position and the offset of the bounding box. The offset is from the entity's origin.
+								// Start with getting the entity's top left position to use it to calculate the bounding box's top left position.
+								Vec2 entityTopLeft(wPos.x - (m_gridSize.x / 2), wPos.y - (m_gridSize.y / 2));
+								Vec2 bbTopLeft(entityTopLeft.x + m_boundingBoxLeft, entityTopLeft.y + m_boundingBoxTop);
 
-							// Next use the data from the sliders to determine the width and height of the bounding box.
-							Vec2 bbSize((float)abs(m_boundingBoxLeft - m_boundingBoxRight), (float)abs(m_boundingBoxTop - m_boundingBoxBottom));
+								// Next use the data from the sliders to determine the width and height of the bounding box.
+								Vec2 bbSize((float)abs(m_boundingBoxLeft - m_boundingBoxRight), (float)abs(m_boundingBoxTop - m_boundingBoxBottom));
 
-							// Since the origin of drawable objects is what this game engine uses to represent it's position, calculate the origin.
-							Vec2 bbOrigin(bbTopLeft.x + (bbSize.x / 2.0f), bbTopLeft.y + (bbSize.y / 2.0f));
+								// Since the origin of drawable objects is what this game engine uses to represent it's position, calculate the origin.
+								Vec2 bbOrigin(bbTopLeft.x + (bbSize.x / 2.0f), bbTopLeft.y + (bbSize.y / 2.0f));
 
-							// The offset of the bounding box's origin from the entity's origin is needed to be able to update the bounding boxes position.
-							Vec2 bbOffset(bbOrigin.x - wPos.x, bbOrigin.y - wPos.y);
-							entity->add<CBoundingBox>(bbOrigin, bbOffset, bbSize, m_blockMoveCheckbox, m_blockVisionCheckbox);
+								// The offset of the bounding box's origin from the entity's origin is needed to be able to update the bounding boxes position.
+								Vec2 bbOffset(bbOrigin.x - wPos.x, bbOrigin.y - wPos.y);
+								entity->add<CBoundingBox>(bbOrigin, bbOffset, bbSize, m_blockMoveCheckbox, m_blockVisionCheckbox);
+							}
+
 							entity->add<CDraggable>().dragging = true;
 							m_entityBeingDragged = entity;
 
@@ -255,11 +300,15 @@ void Scene_Level_Editor::sGui()
 						}
 					}
 
-					// get positioning information for the drawing of the bounding box on the selection area
-					ImVec2 buttonPos = ImGui::GetItemRectMin(); // Capture the position of the button
+					// Get positioning information for the drawing of the bounding box on the selection area.
+					ImVec2 buttonPos = ImGui::GetItemRectMin();
+
+					// A padding around the image in the button is calculated the the ImGui library internally.
+					// This padding needs to be added to the position to get the correct position where the
+					// image's top left coordinate is.
 					ImGuiStyle style;
-					buttonPos.x += style.FramePadding.x;        // offset the x
-					buttonPos.y += style.FramePadding.y;        // offset the y
+					buttonPos.x += style.FramePadding.x;
+					buttonPos.y += style.FramePadding.y;
 					m_selectionAreaBoundingBoxPos = Vec2(buttonPos.x, buttonPos.y);
 				}
 				else
@@ -293,24 +342,50 @@ void Scene_Level_Editor::sGui()
 					ImGui::EndCombo();
 				}
 
-				ImGui::Checkbox("Block Movement", &m_blockMoveCheckbox);
-				ImGui::SameLine(0, 60);
-				ImGui::Checkbox("Block Vision", &m_blockVisionCheckbox);
+				if (m_entityTypes[m_animTypeComboSelectedIndex] == "Decoration")
+				{
+					ImGui::BeginDisabled();
+					ImGui::Checkbox("Block Movement", &m_blockMoveCheckbox);
+					ImGui::SameLine(0, 60);
+					ImGui::Checkbox("Block Vision", &m_blockVisionCheckbox);
 
-				ImGui::SeparatorText("Bounding Box Parameters");
+					ImGui::SeparatorText("Bounding Box Parameters");
 
-				// manual inputs allows values outside of the range so disable it
-				static ImGuiSliderFlags flags = ImGuiSliderFlags_NoInput;
+					// manual inputs allows values outside of the range so disable it
+					static ImGuiSliderFlags flags = ImGuiSliderFlags_NoInput;
 
-				ImGui::PushItemWidth(300.0f);
-				// bounding box sliders
-				ImGui::SliderInt("Left", reinterpret_cast<int*>(&m_boundingBoxLeft), 0, (int)m_gridSize.x, "%d", flags);
-				ImGui::SliderInt("Right", reinterpret_cast<int*>(&m_boundingBoxRight), 0, (int)m_gridSize.x, "%d", flags);
-				ImGui::SliderInt("Top", reinterpret_cast<int*>(&m_boundingBoxTop), 0, (int)m_gridSize.x, "%d", flags);
-				ImGui::SliderInt("Bottom", reinterpret_cast<int*>(&m_boundingBoxBottom), 0, (int)m_gridSize.x, "%d", flags);
-			
+					ImGui::PushItemWidth(300.0f);
+					// bounding box sliders
+					ImGui::SliderInt("Left", reinterpret_cast<int*>(&m_boundingBoxLeft), 0, (int)m_gridSize.x, "%d", flags);
+					ImGui::SliderInt("Right", reinterpret_cast<int*>(&m_boundingBoxRight), 0, (int)m_gridSize.x, "%d", flags);
+					ImGui::SliderInt("Top", reinterpret_cast<int*>(&m_boundingBoxTop), 0, (int)m_gridSize.x, "%d", flags);
+					ImGui::SliderInt("Bottom", reinterpret_cast<int*>(&m_boundingBoxBottom), 0, (int)m_gridSize.x, "%d", flags);
+					ImGui::EndDisabled();
+				}
+				else
+				{
+					ImGui::Checkbox("Block Movement", &m_blockMoveCheckbox);
+					ImGui::SameLine(0, 60);
+					ImGui::Checkbox("Block Vision", &m_blockVisionCheckbox);
+
+					ImGui::SeparatorText("Bounding Box Parameters");
+
+					// manual inputs allows values outside of the range so disable it
+					static ImGuiSliderFlags flags = ImGuiSliderFlags_NoInput;
+
+					ImGui::PushItemWidth(300.0f);
+					// bounding box sliders
+					ImGui::SliderInt("Left", reinterpret_cast<int*>(&m_boundingBoxLeft), 0, (int)m_gridSize.x, "%d", flags);
+					ImGui::SliderInt("Right", reinterpret_cast<int*>(&m_boundingBoxRight), 0, (int)m_gridSize.x, "%d", flags);
+					ImGui::SliderInt("Top", reinterpret_cast<int*>(&m_boundingBoxTop), 0, (int)m_gridSize.x, "%d", flags);
+					ImGui::SliderInt("Bottom", reinterpret_cast<int*>(&m_boundingBoxBottom), 0, (int)m_gridSize.x, "%d", flags);
+				}
+
 				ImGui::EndGroup();
 			}
+
+			ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
+			ImGui::BeginChild("Animations", ImVec2(ImGui::GetContentRegionAvail()), ImGuiChildFlags_None, window_flags);
 
 			int counterOfAnimations = 0;
 			ImVec2 windowSize = ImGui::GetWindowSize();
@@ -332,6 +407,8 @@ void Scene_Level_Editor::sGui()
 					}
 				}
 			}
+			ImGui::EndChild();
+
 			ImGui::EndTabItem();
 		}
 		if (ImGui::BeginTabItem("Entity Manager"))
@@ -479,7 +556,7 @@ void Scene_Level_Editor::sRender()
 				rect.setOrigin(sf::Vector2f(box.halfSize.x, box.halfSize.y));
 				//rect.setRotation(transform.angle);
 				rect.setPosition(box.pos.x, box.pos.y);
-				rect.setFillColor(sf::Color(0, 0, 0, 0));
+				rect.setFillColor(sf::Color(255, 0, 0, 0));
 
 				if (box.blockMove && box.blockVision) { rect.setOutlineColor(sf::Color::Black); }
 				if (box.blockMove && !box.blockVision) { rect.setOutlineColor(sf::Color::Blue); }
