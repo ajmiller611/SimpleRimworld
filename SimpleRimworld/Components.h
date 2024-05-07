@@ -98,15 +98,17 @@ public:
 class CBoundingBox : public Component
 {
 public:
+	Vec2 pos;
+	Vec2 offset;
 	Vec2 size;
 	Vec2 halfSize;
 	bool blockMove = false;
 	bool blockVision = false;
 	CBoundingBox() {}
-	CBoundingBox(const Vec2& s)
-		: size(s), halfSize(s.x / 2, s.y / 2) {}
-	CBoundingBox(const Vec2& s, bool m, bool v)
-		: size(s), blockMove(m), blockVision(v), halfSize(s.x / 2, s.y / 2) {}
+	CBoundingBox(const Vec2& p, const Vec2& o, const Vec2& s)
+		: pos(p), offset(o), size(s), halfSize(s.x / 2, s.y / 2) {}
+	CBoundingBox(const Vec2& p, const Vec2& o, const Vec2& s, bool m, bool v)
+		: pos(p), offset(o), size(s), blockMove(m), blockVision(v), halfSize(s.x / 2, s.y / 2) {}
 };
 
 class CFollowPlayer : public Component

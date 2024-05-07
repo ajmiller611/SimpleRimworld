@@ -99,9 +99,10 @@ void Scene_Level_Editor::sDoAction(const Action& action)
 		else if (action.name() == "TOGGLE_GRID") { m_drawGrid = !m_drawGrid; }
 		else if (action.name() == "QUIT") { onEnd(); }
 
-
 		else if (action.name() == "LEFT_CLICK")
 		{
+			m_mousePos = action.pos();
+
 			// Prevent mouse clicks from registering under the ImGui window.
 			// This prevents an entity currently being dragged from being dropped under the ImGui window.
 			if (!ImGui::GetIO().WantCaptureMouse) 
@@ -110,14 +111,20 @@ void Scene_Level_Editor::sDoAction(const Action& action)
 				if (m_entityBeingDragged != nullptr)
 				{
 					bool cellOccupied = false;
-					int gridX = wMousePos.x / m_gridSize.x;
-					int gridY = wMousePos.y / m_gridSize.y;
+
+					// find the grid position the mouse click is in.
+					int gridX = (int)wMousePos.x / (int)m_gridSize.x;
+					int gridY = (int)wMousePos.y / (int)m_gridSize.y;
+
+					// calculate the top left coordinates of the cell
 					int topLeftX = (int)gridX * (int)m_gridSize.x;
 					int topLeftY = (int)gridY * (int)m_gridSize.y;
-					Vec2 newPos(topLeftX + m_gridSize.x / 2, topLeftY + m_gridSize.y / 2);
+
+					// calculate the origin on the the cell since an entity's position is represented by its origin
+					Vec2 gridOrigin(topLeftX + m_gridSize.x / 2, topLeftY + m_gridSize.y / 2);
 					for (auto& e : m_entityManager.getEntities())
 					{
-						if (newPos == e->get<CTransform>().pos && m_entityBeingDragged != e)
+						if (gridOrigin == e->get<CTransform>().pos && m_entityBeingDragged != e)
 						{
 							cellOccupied = true;
 							break;
@@ -127,7 +134,12 @@ void Scene_Level_Editor::sDoAction(const Action& action)
 					{
 						auto& dragging = m_entityBeingDragged->get<CDraggable>().dragging;
 						dragging = !dragging;
-						m_entityBeingDragged->get<CTransform>().pos = newPos;
+
+						// "snap" the entity to the grid position
+						m_entityBeingDragged->get<CTransform>().pos = gridOrigin;
+						m_entityBeingDragged->get<CBoundingBox>().pos = gridOrigin + m_entityBeingDragged->get<CBoundingBox>().offset;
+						
+						// entity is no longer being dragged
 						m_entityBeingDragged = nullptr;
 					}
 				}
@@ -149,6 +161,14 @@ void Scene_Level_Editor::sDoAction(const Action& action)
 				}
 			}
 		}
+		else if (action.name() == "RIGHT_CLICK")
+		{
+			if (m_entityBeingDragged != nullptr)
+			{
+				m_entityBeingDragged->destroy();
+				m_entityBeingDragged = nullptr;
+			}
+		}
 	}
 }
 
@@ -158,8 +178,12 @@ void Scene_Level_Editor::sDragAndDrop()
 	{
 		if (e->has<CDraggable>() && e->get<CDraggable>().dragging)
 		{
+			auto& transform = e->get<CTransform>();
+			auto& bb = e->get<CBoundingBox>();
+
 			Vec2 wPos = windowToWorld(m_mousePos);
 			e->get<CTransform>().pos = wPos;
+			e->get<CBoundingBox>().pos = Vec2(transform.pos.x + bb.offset.x, transform.pos.y + bb.offset.y);
 		}
 	}
 }
@@ -202,19 +226,41 @@ void Scene_Level_Editor::sGui()
 							entity->add<CAnimation>(m_animationSelected, true);
 							auto wPos = windowToWorld(m_mousePos);
 							entity->add<CTransform>(wPos);
-							entity->add<CBoundingBox>(Vec2(abs(m_boundingBoxLeft - m_boundingBoxRight), abs(m_boundingBoxTop - m_boundingBoxBottom)), m_blockMoveCheckbox, m_blockVisionCheckbox);
+
+							// Calculate the position and the offset of the bounding box. The offset is from the entity's origin.
+							// Start with getting the entity's top left position to use it to calculate the bounding box's top left position.
+							Vec2 entityTopLeft(wPos.x - (m_gridSize.x / 2), wPos.y - (m_gridSize.y / 2));
+							Vec2 bbTopLeft(entityTopLeft.x + m_boundingBoxLeft, entityTopLeft.y + m_boundingBoxTop);
+
+							// Next use the data from the sliders to determine the width and height of the bounding box.
+							Vec2 bbSize((float)abs(m_boundingBoxLeft - m_boundingBoxRight), (float)abs(m_boundingBoxTop - m_boundingBoxBottom));
+
+							// Since the origin of drawable objects is what this game engine uses to represent it's position, calculate the origin.
+							Vec2 bbOrigin(bbTopLeft.x + (bbSize.x / 2.0f), bbTopLeft.y + (bbSize.y / 2.0f));
+
+							// The offset of the bounding box's origin from the entity's origin is needed to be able to update the bounding boxes position.
+							Vec2 bbOffset(bbOrigin.x - wPos.x, bbOrigin.y - wPos.y);
+							entity->add<CBoundingBox>(bbOrigin, bbOffset, bbSize, m_blockMoveCheckbox, m_blockVisionCheckbox);
 							entity->add<CDraggable>().dragging = true;
 							m_entityBeingDragged = entity;
+
+							// Use an default constructed animation object to represent an unselected animation
 							m_animationSelected = Animation();
+
+							// Set the slider variables back to a default grid size.
+							m_boundingBoxLeft = 0;
+							m_boundingBoxRight = m_gridSize.x;
+							m_boundingBoxTop = 0;
+							m_boundingBoxBottom = m_gridSize.y;
 						}
 					}
 
-					// get positioning information for the drawing of the bounding box
+					// get positioning information for the drawing of the bounding box on the selection area
 					ImVec2 buttonPos = ImGui::GetItemRectMin(); // Capture the position of the button
 					ImGuiStyle style;
 					buttonPos.x += style.FramePadding.x;        // offset the x
 					buttonPos.y += style.FramePadding.y;        // offset the y
-					m_widgetPos = Vec2(buttonPos.x, buttonPos.y);
+					m_selectionAreaBoundingBoxPos = Vec2(buttonPos.x, buttonPos.y);
 				}
 				else
 				{
@@ -258,10 +304,10 @@ void Scene_Level_Editor::sGui()
 
 				ImGui::PushItemWidth(300.0f);
 				// bounding box sliders
-				ImGui::SliderInt("Left", reinterpret_cast<int*>(&m_boundingBoxLeft), 0, m_gridSize.x, "%d", flags);
-				ImGui::SliderInt("Right", reinterpret_cast<int*>(&m_boundingBoxRight), 0, m_gridSize.x, "%d", flags);
-				ImGui::SliderInt("Top", reinterpret_cast<int*>(&m_boundingBoxTop), 0, m_gridSize.x, "%d", flags);
-				ImGui::SliderInt("Bottom", reinterpret_cast<int*>(&m_boundingBoxBottom), 0, m_gridSize.x, "%d", flags);
+				ImGui::SliderInt("Left", reinterpret_cast<int*>(&m_boundingBoxLeft), 0, (int)m_gridSize.x, "%d", flags);
+				ImGui::SliderInt("Right", reinterpret_cast<int*>(&m_boundingBoxRight), 0, (int)m_gridSize.x, "%d", flags);
+				ImGui::SliderInt("Top", reinterpret_cast<int*>(&m_boundingBoxTop), 0, (int)m_gridSize.x, "%d", flags);
+				ImGui::SliderInt("Bottom", reinterpret_cast<int*>(&m_boundingBoxBottom), 0, (int)m_gridSize.x, "%d", flags);
 			
 				ImGui::EndGroup();
 			}
@@ -277,7 +323,7 @@ void Scene_Level_Editor::sGui()
 					m_animationSelected = anim;
 				}
 				ImGuiStyle style;
-				int buttonsPerRow = (int)ImGui::GetWindowSize().x / ((int)ImGui::GetItemRectSize().x + (style.FramePadding.x * 2.0f));
+				int buttonsPerRow = (int)ImGui::GetWindowSize().x / (int)(ImGui::GetItemRectSize().x + (style.FramePadding.x * 2.0f));
 				if (buttonsPerRow != 0)
 				{
 					if (counterOfAnimations % buttonsPerRow != 0)
@@ -431,7 +477,8 @@ void Scene_Level_Editor::sRender()
 				sf::RectangleShape rect;
 				rect.setSize(sf::Vector2f(box.size.x - 1, box.size.y - 1));
 				rect.setOrigin(sf::Vector2f(box.halfSize.x, box.halfSize.y));
-				rect.setPosition(transform.pos.x, transform.pos.y);
+				//rect.setRotation(transform.angle);
+				rect.setPosition(box.pos.x, box.pos.y);
 				rect.setFillColor(sf::Color(0, 0, 0, 0));
 
 				if (box.blockMove && box.blockVision) { rect.setOutlineColor(sf::Color::Black); }
@@ -476,12 +523,14 @@ void Scene_Level_Editor::sRender()
 	if (m_animationSelected.getName() != "none")
 	{
 		sf::RectangleShape rectangle;
-		rectangle.setPosition(m_widgetPos.x + m_boundingBoxLeft, m_widgetPos.y + m_boundingBoxTop);
-		rectangle.setSize(sf::Vector2f(m_boundingBoxRight - m_boundingBoxLeft, m_boundingBoxBottom - m_boundingBoxTop));
+		rectangle.setPosition(m_selectionAreaBoundingBoxPos.x + m_boundingBoxLeft, m_selectionAreaBoundingBoxPos.y + m_boundingBoxTop);
+		rectangle.setSize(sf::Vector2f((float)(m_boundingBoxRight - m_boundingBoxLeft), (float)(m_boundingBoxBottom - m_boundingBoxTop)));
 		rectangle.setFillColor(sf::Color::Transparent);
 		rectangle.setOutlineColor(sf::Color::Red);
 		rectangle.setOutlineThickness(1);
 		m_game->window().draw(rectangle);
+
+		//std::cout << "Red BB: " << rectangle.getPosition().x << ", " << rectangle.getPosition().y << "\n";
 	}
 
 	// draw the being dragged entity after the rendering of ImGui so the dragged entity is drawn on top

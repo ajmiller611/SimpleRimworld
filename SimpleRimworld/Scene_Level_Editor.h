@@ -20,11 +20,11 @@ class Scene_Level_Editor : public Scene
 	size_t m_animTypeComboSelectedIndex = 0;
 	bool m_blockMoveCheckbox = false;
 	bool m_blockVisionCheckbox = false;
-	Vec2 m_widgetPos;
+	Vec2 m_selectionAreaBoundingBoxPos;
 	int m_boundingBoxLeft = 0;
-	int m_boundingBoxRight = 64;
+	int m_boundingBoxRight = m_gridSize.x;
 	int m_boundingBoxTop = 0;
-	int m_boundingBoxBottom = 64;
+	int m_boundingBoxBottom = m_gridSize.y;
 
 
 protected:
