@@ -91,6 +91,8 @@ void Scene_Home_Map::spawnPlayer()
 void Scene_Home_Map::update()
 {
 	m_entityManager.update();
+
+	sGui();
 }
 
 void Scene_Home_Map::sMovement()
@@ -135,7 +137,175 @@ void Scene_Home_Map::onEnd()
 
 void Scene_Home_Map::sGui()
 {
-	
+	ImGui::Begin("Assests and Debug");
+	if (ImGui::BeginTabBar("Tab Bar"))
+	{
+		if (ImGui::BeginTabItem("Debug"))
+		{
+			ImGui::Checkbox("Draw Grid", &m_drawGrid);
+			ImGui::Checkbox("Draw Textures", &m_drawTextures);
+			ImGui::Checkbox("Draw Debug", &m_drawCollision);
+			ImGui::EndTabItem();
+		}
+		if (ImGui::BeginTabItem("Animations"))
+		{
+
+			ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
+			ImGui::BeginChild("Animations", ImVec2(ImGui::GetContentRegionAvail()), ImGuiChildFlags_None, window_flags);
+
+			int counterOfAnimations = 0;
+			ImVec2 windowSize = ImGui::GetWindowSize();
+			for (const auto& [name, anim] : m_game->assets().getAnimations())
+			{
+				counterOfAnimations++;
+
+				if (ImGui::ImageButton(("id##" + std::to_string(counterOfAnimations)).c_str(), anim.getSprite(), sf::Vector2f(64, 64)))
+				{
+					
+				}
+				ImGuiStyle style;
+				int buttonsPerRow = (int)ImGui::GetWindowSize().x / (int)(ImGui::GetItemRectSize().x + (style.FramePadding.x * 2.0f));
+				if (buttonsPerRow != 0)
+				{
+					if (counterOfAnimations % buttonsPerRow != 0)
+					{
+						ImGui::SameLine();
+					}
+				}
+			}
+			ImGui::EndChild();
+			ImGui::EndTabItem();
+		}
+		if (ImGui::BeginTabItem("Entity Manager"))
+		{
+			if (ImGui::CollapsingHeader("Entities by Tag"))
+			{
+				ImGui::Indent(20.0f);
+				if (ImGui::CollapsingHeader("enemies"))
+				{
+					// check for the key named "bullet" is existing in map before querying the map
+					if (m_entityManager.getEntityMap().find("Enemies") != m_entityManager.getEntityMap().end())
+					{
+						ImGui::Indent(20.0f);
+						for (auto& e : m_entityManager.getEntityMap().at("Enemies"))
+						{
+							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
+							{
+								e->destroy();
+							}
+							ImGui::SameLine();
+							ImGui::Text(std::to_string(e->id()).c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->tag().c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
+							ImGui::SameLine();
+							ImGui::Text(("(" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
+								std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
+						}
+						ImGui::Unindent(20.0f);
+					}
+				}
+				if (ImGui::CollapsingHeader("tile"))
+				{
+					// check for the key named "Tile" is existing in map before querying the map
+					if (m_entityManager.getEntityMap().find("Tile") != m_entityManager.getEntityMap().end())
+					{
+						ImGui::Indent(20.0f);
+						for (auto& e : m_entityManager.getEntityMap().at("Tile"))
+						{
+							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
+							{
+								e->destroy();
+							}
+							ImGui::SameLine();
+							ImGui::Text(std::to_string(e->id()).c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->tag().c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
+							ImGui::SameLine();
+							ImGui::Text(("(" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
+								std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
+						}
+						ImGui::Unindent(20.0f);
+					}
+				}
+				if (ImGui::CollapsingHeader("decoration"))
+				{
+					// check for the key named "Tile" is existing in map before querying the map
+					if (m_entityManager.getEntityMap().find("Decoration") != m_entityManager.getEntityMap().end())
+					{
+						ImGui::Indent(20.0f);
+						for (auto& e : m_entityManager.getEntityMap().at("Decoration"))
+						{
+							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
+							{
+								e->destroy();
+							}
+							ImGui::SameLine();
+							ImGui::Text(std::to_string(e->id()).c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->tag().c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
+							ImGui::SameLine();
+							ImGui::Text(("(" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
+								std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
+						}
+						ImGui::Unindent(20.0f);
+					}
+				}
+				if (ImGui::CollapsingHeader("player"))
+				{
+					// check for the key named "Player" is existing in map before querying the map
+					if (m_entityManager.getEntityMap().find("Player") != m_entityManager.getEntityMap().end())
+					{
+						ImGui::Indent(20.0f);
+						for (auto& e : m_entityManager.getEntityMap().at("player"))
+						{
+							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
+							{
+								e->destroy();
+							}
+							ImGui::SameLine();
+							ImGui::Text(std::to_string(e->id()).c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->tag().c_str());
+						}
+
+						ImGui::Unindent(20.0f);
+					}
+				}
+				ImGui::Unindent(20.0f);
+			}
+
+			if (ImGui::CollapsingHeader("All Entities"))
+			{
+				ImGui::Indent(20.0f);
+				for (auto& e : m_entityManager.getEntities())
+				{
+					if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
+					{
+						e->destroy();
+					}
+					ImGui::SameLine();
+					ImGui::Text(std::to_string(e->id()).c_str());
+					ImGui::SameLine();
+					ImGui::Text(e->tag().c_str());
+					ImGui::SameLine();
+					ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
+					ImGui::SameLine();
+					ImGui::Text(("(" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
+						std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
+				}
+				ImGui::Unindent(20.0f);
+			}
+			ImGui::EndTabItem();
+		}
+		ImGui::EndTabBar();
+	}
+	ImGui::End();
 }
 
 void Scene_Home_Map::sRender()
