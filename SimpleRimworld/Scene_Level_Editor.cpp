@@ -68,32 +68,34 @@ bool Scene_Level_Editor::saveToFile(const char* filename)
 {
 	std::string fileName = filename;
 	std::ofstream out(fileName + ".txt");
-	if (out.good())
+	if (!out)
 	{
-		for (auto& e : m_entityManager.getEntities())
-		{
-			out << e->tag() << " " << e->get<CAnimation>().animation.getName() << " ";
-			auto& transform = e->get<CTransform>();
-			auto& boundingBox = e->get<CBoundingBox>();
-
-			int gridX = transform.pos.x / m_gridSize.x;
-			int gridY = transform.pos.x / m_gridSize.y;
-			out << gridX << " " << gridY << " ";
-			
-			if (e->tag() != "Decoration")
-			{
-				out << boundingBox.pos.x << " " << boundingBox.pos.y << " "
-					<< boundingBox.offset.x << " " << boundingBox.offset.y << " "
-					<< boundingBox.size.x << " " << boundingBox.size.y << " "
-					<< boundingBox.blockMove << " " << boundingBox.blockVision;
-			}
-			out << std::endl;
-		}
+		std::cerr << "Failed creating file " << fileName << ".txt";
 		out.close();
-		return true;
+		return false;
+	}
+
+	for (auto& e : m_entityManager.getEntities())
+	{
+		out << e->tag() << " " << e->get<CAnimation>().animation.getName() << " ";
+		auto& transform = e->get<CTransform>();
+		auto& boundingBox = e->get<CBoundingBox>();
+
+		int gridX = (int)transform.pos.x / m_gridSize.x;
+		int gridY = (int)transform.pos.y / m_gridSize.y;
+		out << gridX << " " << gridY << " ";
+
+		if (e->tag() != "Decoration")
+		{
+			out << boundingBox.pos.x << " " << boundingBox.pos.y << " "
+				<< boundingBox.offset.x << " " << boundingBox.offset.y << " "
+				<< boundingBox.size.x << " " << boundingBox.size.y << " "
+				<< boundingBox.blockMove << " " << boundingBox.blockVision;
+		}
+		out << std::endl;
 	}
 	out.close();
-	return false;
+	return true;
 }
 
 void Scene_Level_Editor::onEnd()
