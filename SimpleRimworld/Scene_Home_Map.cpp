@@ -9,8 +9,6 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <cmath>
-#include <math.h>
 
 Scene_Home_Map::Scene_Home_Map(GameEngine* gameEngine, const std::string& levelPath)
 	: Scene(gameEngine)
@@ -21,12 +19,63 @@ Scene_Home_Map::Scene_Home_Map(GameEngine* gameEngine, const std::string& levelP
 
 void Scene_Home_Map::init(const std::string& levelPath)
 {
-	
+	loadLevel(levelPath);
+
+	m_gridText.setCharacterSize(12);
+	m_gridText.setFont(m_game->assets().getFont("Tech"));
+
+	registerAction(sf::Keyboard::P, "PAUSE");
+	registerAction(sf::Keyboard::Escape, "QUIT");
+	registerAction(sf::Keyboard::T, "TOGGLE_TEXTURE");
+	registerAction(sf::Keyboard::C, "TOGGLE_COLLISION");
+	registerAction(sf::Keyboard::G, "TOGGLE_GRID");
 }
 
 void Scene_Home_Map::loadLevel(const std::string& filename)
 {
-	
+	m_entityManager = EntityManager();
+
+	std::ifstream file(filename);
+	if (!file) { std::cerr << "Failed to open file " << filename; }
+
+	std::string str;
+	while (file >> str)
+	{
+		if (str == "Tile")
+		{
+			std::shared_ptr<Entity> entity;
+			entity = m_entityManager.addEntity(str);
+			file >> str;
+			entity->add<CAnimation>(m_game->assets().getAnimation(str), true);
+
+			int gridX, gridY;
+			file >> gridX >> gridY;
+			float x = gridX * m_gridSize.x + (m_gridSize.x / 2);
+			float y = gridY * m_gridSize.y + (m_gridSize.y / 2);
+			entity->add<CTransform>(Vec2(x, y));
+
+			float bbPosX, bbPosY, bbOffsetX, bbOffsetY, bbWidth, bbHeight;
+			bool blockMove, blockVision;
+			file >> bbPosX >> bbPosY >> bbOffsetX >> bbOffsetY
+				>> bbWidth >> bbHeight >> blockMove >> blockVision;
+			entity->add<CBoundingBox>(Vec2(bbPosX, bbPosY), Vec2(bbOffsetX, bbOffsetY),
+				Vec2(bbWidth, bbHeight), blockMove, blockVision);
+		}
+		else if (str == "Decoration")
+		{
+			std::shared_ptr<Entity> entity;
+			entity = m_entityManager.addEntity(str);
+			file >> str;
+			entity->add<CAnimation>(m_game->assets().getAnimation(str), true);
+
+			int gridX, gridY;
+			file >> gridX >> gridY;
+			float x = gridX * m_gridSize.x + (m_gridSize.x / 2);
+			float y = gridY * m_gridSize.y + (m_gridSize.y / 2);
+			entity->add<CTransform>(Vec2(x, y));
+		}
+		else { std::cout << "Invalid entity type: " + str << "\n"; }
+	}
 }
 
 std::shared_ptr<Entity> Scene_Home_Map::player()
@@ -41,7 +90,7 @@ void Scene_Home_Map::spawnPlayer()
 
 void Scene_Home_Map::update()
 {
-
+	m_entityManager.update();
 }
 
 void Scene_Home_Map::sMovement()
