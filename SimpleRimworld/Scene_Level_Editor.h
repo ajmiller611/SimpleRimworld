@@ -30,6 +30,7 @@ class Scene_Level_Editor : public Scene
 protected:
 
 	void init();
+	void loadLevel(const std::string& filename);
 	Vec2 windowToWorld(const Vec2& window) const;
 	void update();
 	bool saveToFile(const char* filename);

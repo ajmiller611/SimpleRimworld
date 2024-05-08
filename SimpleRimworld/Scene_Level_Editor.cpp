@@ -46,6 +46,56 @@ void Scene_Level_Editor::init()
 	}
 }
 
+void Scene_Level_Editor::loadLevel(const std::string& filename)
+{
+	m_entityManager = EntityManager();
+
+	std::ifstream file(filename);
+	if (!file) { std::cerr << "Failed to open file " << filename; }
+
+	std::string str;
+	while (file >> str)
+	{
+		if (str == "Tile")
+		{
+			std::shared_ptr<Entity> entity;
+			entity = m_entityManager.addEntity(str);
+			file >> str;
+			entity->add<CAnimation>(m_game->assets().getAnimation(str), true);
+
+			int gridX, gridY;
+			file >> gridX >> gridY;
+			float x = gridX * m_gridSize.x + (m_gridSize.x / 2);
+			float y = gridY * m_gridSize.y + (m_gridSize.y / 2);
+			entity->add<CTransform>(Vec2(x, y));
+
+			float bbPosX, bbPosY, bbOffsetX, bbOffsetY, bbWidth, bbHeight;
+			bool blockMove, blockVision;
+			file >> bbPosX >> bbPosY >> bbOffsetX >> bbOffsetY
+				>> bbWidth >> bbHeight >> blockMove >> blockVision;
+			entity->add<CBoundingBox>(Vec2(bbPosX, bbPosY), Vec2(bbOffsetX, bbOffsetY),
+				Vec2(bbWidth, bbHeight), blockMove, blockVision);
+			entity->add<CDraggable>().dragging = false;
+		}
+		else if (str == "Decoration")
+		{
+			std::shared_ptr<Entity> entity;
+			entity = m_entityManager.addEntity(str);
+			file >> str;
+			entity->add<CAnimation>(m_game->assets().getAnimation(str), true);
+
+			int gridX, gridY;
+			file >> gridX >> gridY;
+			float x = gridX * m_gridSize.x + (m_gridSize.x / 2);
+			float y = gridY * m_gridSize.y + (m_gridSize.y / 2);
+			entity->add<CTransform>(Vec2(x, y));
+			entity->add<CDraggable>().dragging = false;
+		}
+		else { std::cout << "Invalid entity type: " + str << " name:"; }
+	}
+}
+
+
 Vec2 Scene_Level_Editor::windowToWorld(const Vec2& window) const
 {
 	auto& view = m_game->window().getView();
@@ -68,32 +118,34 @@ bool Scene_Level_Editor::saveToFile(const char* filename)
 {
 	std::string fileName = filename;
 	std::ofstream out(fileName + ".txt");
-	if (out.good())
+	if (!out)
 	{
-		for (auto& e : m_entityManager.getEntities())
-		{
-			out << e->tag() << " " << e->get<CAnimation>().animation.getName() << " ";
-			auto& transform = e->get<CTransform>();
-			auto& boundingBox = e->get<CBoundingBox>();
-
-			int gridX = transform.pos.x / m_gridSize.x;
-			int gridY = transform.pos.x / m_gridSize.y;
-			out << gridX << " " << gridY << " ";
-			
-			if (e->tag() != "Decoration")
-			{
-				out << boundingBox.pos.x << " " << boundingBox.pos.y << " "
-					<< boundingBox.offset.x << " " << boundingBox.offset.y << " "
-					<< boundingBox.size.x << " " << boundingBox.size.y << " "
-					<< boundingBox.blockMove << " " << boundingBox.blockVision;
-			}
-			out << std::endl;
-		}
+		std::cerr << "Failed creating file " << fileName << ".txt";
 		out.close();
-		return true;
+		return false;
+	}
+
+	for (auto& e : m_entityManager.getEntities())
+	{
+		out << e->tag() << " " << e->get<CAnimation>().animation.getName() << " ";
+		auto& transform = e->get<CTransform>();
+		auto& boundingBox = e->get<CBoundingBox>();
+
+		int gridX = (int)transform.pos.x / m_gridSize.x;
+		int gridY = (int)transform.pos.y / m_gridSize.y;
+		out << gridX << " " << gridY << " ";
+
+		if (e->tag() != "Decoration")
+		{
+			out << boundingBox.pos.x << " " << boundingBox.pos.y << " "
+				<< boundingBox.offset.x << " " << boundingBox.offset.y << " "
+				<< boundingBox.size.x << " " << boundingBox.size.y << " "
+				<< boundingBox.blockMove << " " << boundingBox.blockVision;
+		}
+		out << std::endl;
 	}
 	out.close();
-	return false;
+	return true;
 }
 
 void Scene_Level_Editor::onEnd()
@@ -238,12 +290,19 @@ void Scene_Level_Editor::sGui()
 
 			ImGui::Separator();
 
-			static char filename[32];
-			ImGui::InputText("File name", filename, 32);
+			static char saveFilename[32];
+			ImGui::InputText("File name to save", saveFilename, 32);
 
-			if (ImGui::Button("Save Level")) 
+			if (ImGui::Button("Save Level"))
 			{
-				saveToFile(filename);
+				saveToFile(saveFilename);
+			}
+
+			static char loadFilename[32];
+			ImGui::InputText("File name to load", loadFilename, 32);
+			if (ImGui::Button("Load Level"))
+			{
+				loadLevel(loadFilename);
 			}
 
 			ImGui::EndTabItem();
