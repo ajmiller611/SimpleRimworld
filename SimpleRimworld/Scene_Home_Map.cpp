@@ -22,13 +22,20 @@ void Scene_Home_Map::init(const std::string& levelPath)
 	loadLevel(levelPath);
 
 	m_gridText.setCharacterSize(12);
+	m_gridText.setFillColor(sf::Color::Black);
 	m_gridText.setFont(m_game->assets().getFont("Tech"));
-
+	
 	registerAction(sf::Keyboard::P, "PAUSE");
 	registerAction(sf::Keyboard::Escape, "QUIT");
 	registerAction(sf::Keyboard::T, "TOGGLE_TEXTURE");
 	registerAction(sf::Keyboard::C, "TOGGLE_COLLISION");
 	registerAction(sf::Keyboard::G, "TOGGLE_GRID");
+	registerAction(sf::Keyboard::W, "UP");
+	registerAction(sf::Keyboard::S, "DOWN");
+	registerAction(sf::Keyboard::A, "LEFT");
+	registerAction(sf::Keyboard::D, "RIGHT");
+
+	spawnPlayer();
 }
 
 void Scene_Home_Map::loadLevel(const std::string& filename)
@@ -80,24 +87,58 @@ void Scene_Home_Map::loadLevel(const std::string& filename)
 
 std::shared_ptr<Entity> Scene_Home_Map::player()
 {
-	return nullptr;
+	return m_entityManager.getEntityMap().at("Player").front();
 }
 
 void Scene_Home_Map::spawnPlayer()
 {
-
+	auto entity = m_entityManager.addEntity("Player");
+	entity->add<CAnimation>(m_game->assets().getAnimation("GreenCharacter"), true);
+	entity->add<CTransform>(Vec2(32, 224));
+	entity->add<CBoundingBox>(entity->get<CTransform>().pos, Vec2(0, 0), Vec2(40, 40));
+	entity->add<CInput>();
 }
 
 void Scene_Home_Map::update()
 {
 	m_entityManager.update();
 
+	sMovement();
 	sGui();
 }
 
 void Scene_Home_Map::sMovement()
 {
+	auto& pInput = player()->get<CInput>();
+	auto& pTransform = player()->get<CTransform>();
+	pTransform.prevPos = pTransform.pos;
+	Vec2 playerVelocity(0, 0);
 
+	if (pInput.up)
+	{
+		playerVelocity.y -= 3;
+	}
+	else if (pInput.down)
+	{
+		playerVelocity.y += 3;
+	}
+	else if (pInput.left)
+	{
+		playerVelocity.x -= 3;
+	}
+	else if (pInput.right)
+	{
+		playerVelocity.x += 3;
+	}
+
+	pTransform.velocity = playerVelocity;
+
+	for (auto& e : m_entityManager.getEntities())
+	{
+		// Update the entities transform and bounding box position
+		e->get<CTransform>().pos += e->get<CTransform>().velocity;
+		e->get<CBoundingBox>().pos += e->get<CTransform>().velocity;
+	}
 }
 
 void Scene_Home_Map::sAI()
@@ -117,7 +158,24 @@ void Scene_Home_Map::sCollision()
 
 void Scene_Home_Map::sDoAction(const Action& action)
 {
-	
+	if (action.type() == "START")
+	{
+		if (action.name() == "UP") { player()->get<CInput>().up = true; }
+		else if (action.name() == "DOWN") { player()->get<CInput>().down = true; }
+		else if (action.name() == "LEFT") { player()->get<CInput>().left = true; }
+		else if (action.name() == "RIGHT") { player()->get<CInput>().right = true; }
+		else if (action.name() == "TOGGLE_TEXTURE") { m_drawTextures = !m_drawTextures; }
+		else if (action.name() == "TOGGLE_COLLISION") { m_drawCollision = !m_drawCollision; }
+		else if (action.name() == "TOGGLE_GRID") { m_drawGrid = !m_drawGrid; }
+		else if (action.name() == "QUIT") { onEnd(); }
+	}
+	else if (action.type() == "END")
+	{
+		if (action.name() == "UP") { player()->get<CInput>().up = false; }
+		else if (action.name() == "DOWN") { player()->get<CInput>().down = false; }
+		else if (action.name() == "LEFT") { player()->get<CInput>().left = false; }
+		else if (action.name() == "RIGHT") { player()->get<CInput>().right = false; }
+	}
 }
 
 void Scene_Home_Map::sAnimation()
@@ -132,7 +190,7 @@ void Scene_Home_Map::sCamera()
 
 void Scene_Home_Map::onEnd()
 {
-	
+	m_game->changeScene("Menu", std::make_shared<Scene_Menu>(m_game), true);
 }
 
 void Scene_Home_Map::sGui()
@@ -262,7 +320,7 @@ void Scene_Home_Map::sGui()
 					if (m_entityManager.getEntityMap().find("Player") != m_entityManager.getEntityMap().end())
 					{
 						ImGui::Indent(20.0f);
-						for (auto& e : m_entityManager.getEntityMap().at("player"))
+						for (auto& e : m_entityManager.getEntityMap().at("Player"))
 						{
 							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
 							{
@@ -272,6 +330,11 @@ void Scene_Home_Map::sGui()
 							ImGui::Text(std::to_string(e->id()).c_str());
 							ImGui::SameLine();
 							ImGui::Text(e->tag().c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
+							ImGui::SameLine();
+							ImGui::Text(("(" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
+								std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
 						}
 
 						ImGui::Unindent(20.0f);
@@ -379,13 +442,13 @@ void Scene_Home_Map::sRender()
 				sf::RectangleShape rect;
 				rect.setSize(sf::Vector2f(box.size.x - 1, box.size.y - 1));
 				rect.setOrigin(sf::Vector2f(box.halfSize.x, box.halfSize.y));
-				rect.setPosition(transform.pos.x, transform.pos.y);
+				rect.setPosition(box.pos.x, box.pos.y);
 				rect.setFillColor(sf::Color(0, 0, 0, 0));
 
-				if (box.blockMove && box.blockVision) { rect.setOutlineColor(sf::Color::Black); }
+				if (box.blockMove && box.blockVision) { rect.setOutlineColor(sf::Color::Red); }
 				if (box.blockMove && !box.blockVision) { rect.setOutlineColor(sf::Color::Blue); }
-				if (!box.blockMove && box.blockVision) { rect.setOutlineColor(sf::Color::Red); }
-				if (!box.blockMove && !box.blockVision) { rect.setOutlineColor(sf::Color::White); }
+				if (!box.blockMove && box.blockVision) { rect.setOutlineColor(sf::Color::Green); }
+				if (!box.blockMove && !box.blockVision) { rect.setOutlineColor(sf::Color::Magenta); }
 				rect.setOutlineThickness(1);
 				m_game->window().draw(rect);
 			}
