@@ -46,6 +46,56 @@ void Scene_Level_Editor::init()
 	}
 }
 
+void Scene_Level_Editor::loadLevel(const std::string& filename)
+{
+	m_entityManager = EntityManager();
+
+	std::ifstream file(filename);
+	if (!file) { std::cerr << "Failed to open file " << filename; }
+
+	std::string str;
+	while (file >> str)
+	{
+		if (str == "Tile")
+		{
+			std::shared_ptr<Entity> entity;
+			entity = m_entityManager.addEntity(str);
+			file >> str;
+			entity->add<CAnimation>(m_game->assets().getAnimation(str), true);
+
+			int gridX, gridY;
+			file >> gridX >> gridY;
+			float x = gridX * m_gridSize.x + (m_gridSize.x / 2);
+			float y = gridY * m_gridSize.y + (m_gridSize.y / 2);
+			entity->add<CTransform>(Vec2(x, y));
+
+			float bbPosX, bbPosY, bbOffsetX, bbOffsetY, bbWidth, bbHeight;
+			bool blockMove, blockVision;
+			file >> bbPosX >> bbPosY >> bbOffsetX >> bbOffsetY
+				>> bbWidth >> bbHeight >> blockMove >> blockVision;
+			entity->add<CBoundingBox>(Vec2(bbPosX, bbPosY), Vec2(bbOffsetX, bbOffsetY),
+				Vec2(bbWidth, bbHeight), blockMove, blockVision);
+			entity->add<CDraggable>().dragging = false;
+		}
+		else if (str == "Decoration")
+		{
+			std::shared_ptr<Entity> entity;
+			entity = m_entityManager.addEntity(str);
+			file >> str;
+			entity->add<CAnimation>(m_game->assets().getAnimation(str), true);
+
+			int gridX, gridY;
+			file >> gridX >> gridY;
+			float x = gridX * m_gridSize.x + (m_gridSize.x / 2);
+			float y = gridY * m_gridSize.y + (m_gridSize.y / 2);
+			entity->add<CTransform>(Vec2(x, y));
+			entity->add<CDraggable>().dragging = false;
+		}
+		else { std::cout << "Invalid entity type: " + str << " name:"; }
+	}
+}
+
+
 Vec2 Scene_Level_Editor::windowToWorld(const Vec2& window) const
 {
 	auto& view = m_game->window().getView();
@@ -240,12 +290,19 @@ void Scene_Level_Editor::sGui()
 
 			ImGui::Separator();
 
-			static char filename[32];
-			ImGui::InputText("File name", filename, 32);
+			static char saveFilename[32];
+			ImGui::InputText("File name to save", saveFilename, 32);
 
-			if (ImGui::Button("Save Level")) 
+			if (ImGui::Button("Save Level"))
 			{
-				saveToFile(filename);
+				saveToFile(saveFilename);
+			}
+
+			static char loadFilename[32];
+			ImGui::InputText("File name to load", loadFilename, 32);
+			if (ImGui::Button("Load Level"))
+			{
+				loadLevel(loadFilename);
 			}
 
 			ImGui::EndTabItem();
