@@ -95,7 +95,6 @@ void Scene_Level_Editor::loadLevel(const std::string& filename)
 	}
 }
 
-
 Vec2 Scene_Level_Editor::windowToWorld(const Vec2& window) const
 {
 	auto& view = m_game->window().getView();
@@ -162,27 +161,14 @@ void Scene_Level_Editor::sDoAction(const Action& action)
 
 	if (action.type() == "START")
 	{
-		if (action.name() == "UP")
-		{
-
-		}
-		else if (action.name() == "DOWN")
-		{
-			
-		}
-		else if (action.name() == "LEFT")
-		{
-			
-		}
-		else if (action.name() == "RIGHT")
-		{
-
-		}
+			 if (action.name() == "UP") { }
+		else if (action.name() == "DOWN") { }
+		else if (action.name() == "LEFT") { }
+		else if (action.name() == "RIGHT") { }
 		else if (action.name() == "TOGGLE_TEXTURE") { m_drawTextures = !m_drawTextures; }
 		else if (action.name() == "TOGGLE_COLLISION") { m_drawCollision = !m_drawCollision; }
 		else if (action.name() == "TOGGLE_GRID") { m_drawGrid = !m_drawGrid; }
 		else if (action.name() == "QUIT") { onEnd(); }
-
 		else if (action.name() == "LEFT_CLICK")
 		{
 			m_mousePos = action.pos();
@@ -467,7 +453,6 @@ void Scene_Level_Editor::sGui()
 				}
 			}
 			ImGui::EndChild();
-
 			ImGui::EndTabItem();
 		}
 		if (ImGui::BeginTabItem("Entity Manager"))
@@ -475,13 +460,40 @@ void Scene_Level_Editor::sGui()
 			if (ImGui::CollapsingHeader("Entities by Tag"))
 			{
 				ImGui::Indent(20.0f);
-				if (ImGui::CollapsingHeader("enemies"))
+				if (ImGui::CollapsingHeader("tile"))
 				{
-					// check for the key named "bullet" is existing in map before querying the map
-					if (m_entityManager.getEntityMap().find("npc") != m_entityManager.getEntityMap().end())
+					// check for the key named "Tile" is existing in map before querying the map
+					if (m_entityManager.getEntityMap().find("Tile") != m_entityManager.getEntityMap().end())
 					{
 						ImGui::Indent(20.0f);
-						for (auto& e : m_entityManager.getEntityMap().at("npc"))
+						for (auto& e : m_entityManager.getEntityMap().at("Tile"))
+						{
+							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
+							{
+								e->destroy();
+							}
+							ImGui::SameLine();
+							ImGui::Text(std::to_string(e->id()).c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->tag().c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
+							ImGui::SameLine();
+							ImGui::Text(("Pos: (" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
+								std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
+							ImGui::SameLine();
+							ImGui::Text(("BBpos: (" + std::to_string((int)e->get<CBoundingBox>().pos.x) + "," + std::to_string((int)e->get<CBoundingBox>().pos.y) + ")" +
+								" BBOffset: (" + std::to_string((int)e->get<CBoundingBox>().offset.x) + ", " + std::to_string((int)e->get<CBoundingBox>().offset.y) + ")").c_str());
+						}
+						ImGui::Unindent(20.0f);
+					}
+				}
+				if (ImGui::CollapsingHeader("decoration"))
+				{
+					if (m_entityManager.getEntityMap().find("Decoration") != m_entityManager.getEntityMap().end())
+					{
+						ImGui::Indent(20.0f);
+						for (auto& e : m_entityManager.getEntityMap().at("Decoration"))
 						{
 							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
 							{
@@ -500,13 +512,12 @@ void Scene_Level_Editor::sGui()
 						ImGui::Unindent(20.0f);
 					}
 				}
-				if (ImGui::CollapsingHeader("tile"))
+				if (ImGui::CollapsingHeader("enemies"))
 				{
-					// check for the key named "tile" is existing in map before querying the map
-					if (m_entityManager.getEntityMap().find("tile") != m_entityManager.getEntityMap().end())
+					if (m_entityManager.getEntityMap().find("Enemies") != m_entityManager.getEntityMap().end())
 					{
 						ImGui::Indent(20.0f);
-						for (auto& e : m_entityManager.getEntityMap().at("tile"))
+						for (auto& e : m_entityManager.getEntityMap().at("Enemies"))
 						{
 							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
 							{
@@ -527,11 +538,10 @@ void Scene_Level_Editor::sGui()
 				}
 				if (ImGui::CollapsingHeader("player"))
 				{
-					// check for the key named "player" is existing in map before querying the map
-					if (m_entityManager.getEntityMap().find("player") != m_entityManager.getEntityMap().end())
+					if (m_entityManager.getEntityMap().find("Player") != m_entityManager.getEntityMap().end())
 					{
 						ImGui::Indent(20.0f);
-						for (auto& e : m_entityManager.getEntityMap().at("player"))
+						for (auto& e : m_entityManager.getEntityMap().at("Player"))
 						{
 							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
 							{
@@ -548,7 +558,6 @@ void Scene_Level_Editor::sGui()
 				}
 				ImGui::Unindent(20.0f);
 			}
-
 			if (ImGui::CollapsingHeader("All Entities"))
 			{
 				ImGui::Indent(20.0f);
@@ -613,7 +622,6 @@ void Scene_Level_Editor::sRender()
 				sf::RectangleShape rect;
 				rect.setSize(sf::Vector2f(box.size.x - 1, box.size.y - 1));
 				rect.setOrigin(sf::Vector2f(box.halfSize.x, box.halfSize.y));
-				//rect.setRotation(transform.angle);
 				rect.setPosition(box.pos.x, box.pos.y);
 				rect.setFillColor(sf::Color(255, 0, 0, 0));
 
@@ -665,11 +673,9 @@ void Scene_Level_Editor::sRender()
 		rectangle.setOutlineColor(sf::Color::Red);
 		rectangle.setOutlineThickness(1);
 		m_game->window().draw(rectangle);
-
-		//std::cout << "Red BB: " << rectangle.getPosition().x << ", " << rectangle.getPosition().y << "\n";
 	}
 
-	// draw the being dragged entity after the rendering of ImGui so the dragged entity is drawn on top
+	// draw the dragging entity after the rendering of ImGui so the dragged entity is drawn on top
 	if (m_entityBeingDragged != nullptr)
 	{
 		auto& transform = m_entityBeingDragged->get<CTransform>();
