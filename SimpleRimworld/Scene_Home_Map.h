@@ -6,12 +6,20 @@
 
 #include "EntityManager.h"
 
+
 class Scene_Home_Map : public Scene
 {
 	struct PlayerConfig
 	{
 		float X = 0, Y = 0, CX = 0, CY = 0, SPEED = 0, HEALTH = 0;
 		std::string WEAPON;
+	};
+
+	struct Collision
+	{
+		bool collided = false;
+		Vec2 overlap = { 0, 0 };
+		char direction = '\0';
 	};
 
 protected:
@@ -28,13 +36,13 @@ protected:
 
 	void init(const std::string& levelPath);
 	void loadLevel(const std::string& filename);
-
-	void onEnd();
-	void update();
-	void spawnPlayer();
 	std::shared_ptr<Entity> player();
-	void sDoAction(const Action& action);
+	void spawnPlayer();
+	void update();
+	void onEnd();
+	Collision collided(std::shared_ptr<Entity> a, std::shared_ptr<Entity> b);
 
+	void sDoAction(const Action& action);
 	void sMovement();
 	void sAI();
 	void sStatus();

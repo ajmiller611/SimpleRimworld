@@ -104,6 +104,7 @@ void Scene_Home_Map::update()
 	m_entityManager.update();
 
 	sMovement();
+	sCollision();
 	sGui();
 }
 
@@ -151,9 +152,80 @@ void Scene_Home_Map::sStatus()
 	
 }
 
+Scene_Home_Map::Collision Scene_Home_Map::collided(std::shared_ptr<Entity> a, std::shared_ptr<Entity> b)
+{
+	auto& aBoundingBox = a->get<CBoundingBox>();
+	auto& bBoundingBox = b->get<CBoundingBox>();
+	Vec2 overlap = Physics::GetOverlap(a, b);
+	Vec2 previousOverlap = Physics::GetPreviousOverlap(a, b);
+
+	if (a->tag() == "Player")
+	{
+		if (overlap.x > 0 && overlap.y > 0)
+		{
+			// Entity 'a' collison on the left side
+			if (previousOverlap.y > 0 && aBoundingBox.pos.x > bBoundingBox.pos.x)
+			{
+				return { true, overlap, 'l' };
+			}
+			// Entity 'a' collison on the right side
+			else if (previousOverlap.y > 0 && aBoundingBox.pos.x < bBoundingBox.pos.x)
+			{
+				return { true, overlap, 'r' };
+			}
+			// Entity 'a' collison on the top side
+			else if (previousOverlap.x > 0 && aBoundingBox.pos.y > bBoundingBox.pos.y)
+			{
+				return { true, overlap, 't' };
+			}
+			// Entity 'a' collison on the bottom side
+			else if (previousOverlap.x > 0 && aBoundingBox.pos.y < bBoundingBox.pos.y)
+			{
+				return { true, overlap, 'b' };
+			}
+		}
+	}
+	else
+	{
+		if (overlap.x > 0 && overlap.y > 0)
+		{
+			return { true, overlap, '\0' };
+		}
+	}
+
+	return { false, Vec2(0,0), '\0' };
+}
+
 void Scene_Home_Map::sCollision()
 {
+	auto& tiles = m_entityManager.getEntityMap().at("Tile");
 
+	for (auto& e : m_entityManager.getEntities())
+	{
+		for (auto& tile : tiles)
+		{
+			if (tile->get<CBoundingBox>().blockMove)
+			{
+				auto& entityTransform = e->get<CTransform>();
+				auto& entityBoundingBox = e->get<CBoundingBox>();
+
+				Collision result = collided(e, tile);
+				if (result.collided)
+				{
+					switch (result.direction)
+					{
+					case 'l': entityTransform.pos.x += result.overlap.x; entityBoundingBox.pos.x += result.overlap.x; break;
+					case 'r': entityTransform.pos.x -= result.overlap.x; entityBoundingBox.pos.x -= result.overlap.x; break;
+					case 't': entityTransform.pos.y += result.overlap.y; entityBoundingBox.pos.y += result.overlap.y; break;
+					case 'b': entityTransform.pos.y -= result.overlap.y; entityBoundingBox.pos.y -= result.overlap.y; break;
+					case '\0':
+						// For now enemies don't detect which direction they are colliding from.
+						entityTransform.pos -= entityTransform.velocity;
+					}
+				}
+			}
+		}
+	}
 }
 
 void Scene_Home_Map::sDoAction(const Action& action)
@@ -239,31 +311,6 @@ void Scene_Home_Map::sGui()
 			if (ImGui::CollapsingHeader("Entities by Tag"))
 			{
 				ImGui::Indent(20.0f);
-				if (ImGui::CollapsingHeader("enemies"))
-				{
-					// check for the key named "bullet" is existing in map before querying the map
-					if (m_entityManager.getEntityMap().find("Enemies") != m_entityManager.getEntityMap().end())
-					{
-						ImGui::Indent(20.0f);
-						for (auto& e : m_entityManager.getEntityMap().at("Enemies"))
-						{
-							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
-							{
-								e->destroy();
-							}
-							ImGui::SameLine();
-							ImGui::Text(std::to_string(e->id()).c_str());
-							ImGui::SameLine();
-							ImGui::Text(e->tag().c_str());
-							ImGui::SameLine();
-							ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
-							ImGui::SameLine();
-							ImGui::Text(("(" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
-								std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
-						}
-						ImGui::Unindent(20.0f);
-					}
-				}
 				if (ImGui::CollapsingHeader("tile"))
 				{
 					// check for the key named "Tile" is existing in map before querying the map
@@ -283,8 +330,11 @@ void Scene_Home_Map::sGui()
 							ImGui::SameLine();
 							ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
 							ImGui::SameLine();
-							ImGui::Text(("(" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
+							ImGui::Text(("Pos: (" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
 								std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
+							ImGui::SameLine();
+							ImGui::Text(("BBpos: (" + std::to_string((int)e->get<CBoundingBox>().pos.x) + "," + std::to_string((int)e->get<CBoundingBox>().pos.y) + ")" +
+								" BBOffset: (" + std::to_string((int)e->get<CBoundingBox>().offset.x) + ", " + std::to_string((int)e->get<CBoundingBox>().offset.y) + ")").c_str());
 						}
 						ImGui::Unindent(20.0f);
 					}
@@ -314,6 +364,32 @@ void Scene_Home_Map::sGui()
 						ImGui::Unindent(20.0f);
 					}
 				}
+				if (ImGui::CollapsingHeader("enemies"))
+				{
+					// check for the key named "bullet" is existing in map before querying the map
+					if (m_entityManager.getEntityMap().find("Enemies") != m_entityManager.getEntityMap().end())
+					{
+						ImGui::Indent(20.0f);
+						for (auto& e : m_entityManager.getEntityMap().at("Enemies"))
+						{
+							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
+							{
+								e->destroy();
+							}
+							ImGui::SameLine();
+							ImGui::Text(std::to_string(e->id()).c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->tag().c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
+							ImGui::SameLine();
+							ImGui::Text(("(" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
+								std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
+						}
+						ImGui::Unindent(20.0f);
+					}
+				}
+				
 				if (ImGui::CollapsingHeader("player"))
 				{
 					// check for the key named "Player" is existing in map before querying the map

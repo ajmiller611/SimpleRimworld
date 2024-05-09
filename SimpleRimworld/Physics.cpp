@@ -5,8 +5,8 @@ Vec2 Physics::GetOverlap(std::shared_ptr<Entity> a, std::shared_ptr<Entity> b)
 {
 	if (a->has<CBoundingBox>() && b->has<CBoundingBox>())
 	{
-		Vec2 delta(abs(b->get<CTransform>().pos.x - a->get<CTransform>().pos.x),
-			abs(b->get<CTransform>().pos.y - a->get<CTransform>().pos.y));
+		Vec2 delta(abs(b->get<CBoundingBox>().pos.x - a->get<CTransform>().pos.x),
+			abs(b->get<CBoundingBox>().pos.y - a->get<CTransform>().pos.y));
 		float XOverlap = a->get<CBoundingBox>().halfSize.x + b->get<CBoundingBox>().halfSize.x - delta.x;
 		float YOverlap = a->get<CBoundingBox>().halfSize.y + b->get<CBoundingBox>().halfSize.y - delta.y;
 		return Vec2(XOverlap, YOverlap);
@@ -18,8 +18,8 @@ Vec2 Physics::GetPreviousOverlap(std::shared_ptr<Entity> a, std::shared_ptr<Enti
 {
 	if (a->has<CBoundingBox>() && b->has<CBoundingBox>())
 	{
-		Vec2 delta(abs(b->get<CTransform>().pos.x - a->get<CTransform>().prevPos.x),
-			abs(b->get<CTransform>().pos.y - a->get<CTransform>().prevPos.y));
+		Vec2 delta(abs(b->get<CBoundingBox>().pos.x - a->get<CTransform>().prevPos.x),
+			abs(b->get<CBoundingBox>().pos.y - a->get<CTransform>().prevPos.y));
 		float XOverlap = a->get<CBoundingBox>().halfSize.x + b->get<CBoundingBox>().halfSize.x - delta.x;
 		float YOverlap = a->get<CBoundingBox>().halfSize.y + b->get<CBoundingBox>().halfSize.y - delta.y;
 		return Vec2(XOverlap, YOverlap);
