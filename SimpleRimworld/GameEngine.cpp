@@ -72,20 +72,6 @@ void GameEngine::sUserInput()
 			quit();
 		}
 
-		if (event.type == sf::Event::KeyPressed)
-		{
-			if (event.key.code == sf::Keyboard::X)
-			{
-				sf::Texture texture;
-				texture.create(m_window.getSize().x, m_window.getSize().y);
-				texture.update(m_window);
-				if (texture.copyToImage().saveToFile("test.png"))
-				{
-					std::cout << "screenshot saved to " << "test.png" << std::endl;
-				}
-			}
-		}
-
 		if (event.type == sf::Event::KeyPressed || event.type == sf::Event::KeyReleased)
 		{
 			if (currentScene()->getActionMap().find(event.key.code) == currentScene()->getActionMap().end())
