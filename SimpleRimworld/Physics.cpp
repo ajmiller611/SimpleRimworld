@@ -1,5 +1,4 @@
 #include "Physics.h"
-#include "Components.h"
 
 Vec2 Physics::GetOverlap(std::shared_ptr<Entity> a, std::shared_ptr<Entity> b)
 {

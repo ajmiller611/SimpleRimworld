@@ -1,10 +1,7 @@
 #include "Scene_Home_Map.h"
 #include "Scene_Menu.h"
 #include "Physics.h"
-#include "Assets.h"
 #include "GameEngine.h"
-#include "Components.h"
-#include "Action.h"
 
 #include <fstream>
 #include <iostream>
