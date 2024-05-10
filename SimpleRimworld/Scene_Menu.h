@@ -5,8 +5,6 @@
 #include <memory>
 #include <deque>
 
-#include "EntityManager.h"
-
 class Scene_Menu : public Scene
 {
 protected:
