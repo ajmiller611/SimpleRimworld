@@ -121,32 +121,54 @@ void Scene_Home_Map::sMovement()
 	if (pInput.up)
 	{
 		playerVelocity.y -= 3;
+		pTransform.facing = Vec2(0, -1);
 	}
 	else if (pInput.down)
 	{
 		playerVelocity.y += 3;
+		pTransform.facing = Vec2(0, 1);
 	}
 	else if (pInput.left)
 	{
 		playerVelocity.x -= 3;
+		pTransform.facing = Vec2(-1, 0);
 	}
 	else if (pInput.right)
 	{
 		playerVelocity.x += 3;
+		pTransform.facing = Vec2(1, 0);
 	}
 
 	pTransform.velocity = playerVelocity;
 
+	// Update the entities positions
 	for (auto& e : m_entityManager.getEntities())
 	{
-		// Update the entities transform and bounding box position
-		e->get<CTransform>().pos += e->get<CTransform>().velocity;
-		e->get<CBoundingBox>().pos += e->get<CTransform>().velocity;
+		auto& eTransform = e->get<CTransform>();
+		eTransform.pos += eTransform.velocity;
+		e->get<CBoundingBox>().pos += eTransform.velocity;
 
 		if (e->has<CHand>())
 		{
 			auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
-			hand->get<CTransform>().pos += e->get<CTransform>().velocity;
+
+			Vec2 newPos = hand->get<CTransform>().pos;
+			float x = 0, y = 0;
+			if (eTransform.facing.x != 0)
+			{
+				x = eTransform.pos.x + (e->get<CHand>().offset.x * eTransform.facing.x);
+				y = eTransform.pos.y + (e->get<CHand>().offset.y * eTransform.facing.x);
+				newPos = Vec2(x, y);
+			}
+			else if (eTransform.facing.y != 0)
+			{
+				// For hand placement when facing up or down, the inverse of the offset is applied.
+				// To keep the hand representing the right side hand, the opposite of the y-offset is needed.
+				x = eTransform.pos.x + (-e->get<CHand>().offset.y * eTransform.facing.y);
+				y = eTransform.pos.y + (e->get<CHand>().offset.x * eTransform.facing.y);
+				newPos = Vec2(x, y);
+			}
+			hand->get<CTransform>().pos = newPos + eTransform.velocity;
 		}
 	}
 }
