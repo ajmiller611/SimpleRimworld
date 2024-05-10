@@ -19,7 +19,8 @@ typedef std::tuple <
 	CBoundingBox,
 	CFollowPlayer,
 	CPatrol,
-	CDraggable
+	CDraggable,
+	CHand
 > ComponentTuple;
 
 class Entity

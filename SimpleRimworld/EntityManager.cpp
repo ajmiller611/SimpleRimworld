@@ -52,3 +52,8 @@ const std::map<std::string, EntityVec>& EntityManager::getEntityMap()
 {
 	return m_entityMap;
 }
+
+std::shared_ptr<Entity> EntityManager::getEntity(size_t id)
+{
+	return m_entities.at(id);
+}

@@ -26,4 +26,5 @@ public:
 	const EntityVec& getEntities();
 	const EntityVec& getEntities(const std::string& tag);
 	const std::map<std::string, EntityVec>& getEntityMap();
+	std::shared_ptr<Entity> getEntity(size_t id);
 };

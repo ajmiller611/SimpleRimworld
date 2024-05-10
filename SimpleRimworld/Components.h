@@ -137,3 +137,13 @@ public:
 	bool dragging = false;
 	CDraggable() {}
 };
+
+class CHand : public Component
+{
+public:
+	size_t entityID = 0;
+	Vec2 offset = { 0, 0 };
+	CHand() {}
+	CHand(size_t e, Vec2 o)
+		: entityID(e), offset(o) {}
+};

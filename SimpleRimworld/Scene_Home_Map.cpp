@@ -94,6 +94,12 @@ void Scene_Home_Map::spawnPlayer()
 	entity->add<CTransform>(Vec2(32, 224));
 	entity->add<CBoundingBox>(entity->get<CTransform>().pos, Vec2(0, 0), Vec2(40, 40));
 	entity->add<CInput>();
+
+	auto hand = m_entityManager.addEntity("Decoration");
+	hand->add<CAnimation>(m_game->assets().getAnimation("GreenHand"), true);
+	hand->add<CTransform>(entity->get<CTransform>().pos + Vec2(28, 16));
+
+	entity->add<CHand>(hand->id(), Vec2(28, 16));
 }
 
 void Scene_Home_Map::update()
@@ -136,6 +142,12 @@ void Scene_Home_Map::sMovement()
 		// Update the entities transform and bounding box position
 		e->get<CTransform>().pos += e->get<CTransform>().velocity;
 		e->get<CBoundingBox>().pos += e->get<CTransform>().velocity;
+
+		if (e->has<CHand>())
+		{
+			auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+			hand->get<CTransform>().pos += e->get<CTransform>().velocity;
+		}
 	}
 }
 
@@ -161,25 +173,13 @@ Scene_Home_Map::Collision Scene_Home_Map::collided(std::shared_ptr<Entity> a, st
 		if (overlap.x > 0 && overlap.y > 0)
 		{
 			// Entity 'a' collison on the left side
-			if (previousOverlap.y > 0 && aBoundingBox.pos.x > bBoundingBox.pos.x)
-			{
-				return { true, overlap, 'l' };
-			}
+			if (previousOverlap.y > 0 && aBoundingBox.pos.x > bBoundingBox.pos.x) { return { true, overlap, 'l' }; }
 			// Entity 'a' collison on the right side
-			else if (previousOverlap.y > 0 && aBoundingBox.pos.x < bBoundingBox.pos.x)
-			{
-				return { true, overlap, 'r' };
-			}
+			else if (previousOverlap.y > 0 && aBoundingBox.pos.x < bBoundingBox.pos.x) { return { true, overlap, 'r' }; }
 			// Entity 'a' collison on the top side
-			else if (previousOverlap.x > 0 && aBoundingBox.pos.y > bBoundingBox.pos.y)
-			{
-				return { true, overlap, 't' };
-			}
+			else if (previousOverlap.x > 0 && aBoundingBox.pos.y > bBoundingBox.pos.y) { return { true, overlap, 't' }; }
 			// Entity 'a' collison on the bottom side
-			else if (previousOverlap.x > 0 && aBoundingBox.pos.y < bBoundingBox.pos.y)
-			{
-				return { true, overlap, 'b' };
-			}
+			else if (previousOverlap.x > 0 && aBoundingBox.pos.y < bBoundingBox.pos.y) { return { true, overlap, 'b' }; }
 		}
 	}
 	else
@@ -211,10 +211,42 @@ void Scene_Home_Map::sCollision()
 				{
 					switch (result.direction)
 					{
-					case 'l': entityTransform.pos.x += result.overlap.x; entityBoundingBox.pos.x += result.overlap.x; break;
-					case 'r': entityTransform.pos.x -= result.overlap.x; entityBoundingBox.pos.x -= result.overlap.x; break;
-					case 't': entityTransform.pos.y += result.overlap.y; entityBoundingBox.pos.y += result.overlap.y; break;
-					case 'b': entityTransform.pos.y -= result.overlap.y; entityBoundingBox.pos.y -= result.overlap.y; break;
+					case 'l':
+						entityTransform.pos.x += result.overlap.x;
+						entityBoundingBox.pos.x += result.overlap.x;
+						if (e->has<CHand>())
+						{
+							auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+							hand->get<CTransform>().pos.x += result.overlap.x;
+						}
+						break;
+					case 'r':
+						entityTransform.pos.x -= result.overlap.x;
+						entityBoundingBox.pos.x -= result.overlap.x;
+						if (e->has<CHand>())
+						{
+							auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+							hand->get<CTransform>().pos.x -= result.overlap.x;
+						}
+						break;
+					case 't': 
+						entityTransform.pos.y += result.overlap.y;
+						entityBoundingBox.pos.y += result.overlap.y;
+						if (e->has<CHand>())
+						{
+							auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+							hand->get<CTransform>().pos.y += result.overlap.y;
+						}
+						break;
+					case 'b':
+						entityTransform.pos.y -= result.overlap.y;
+						entityBoundingBox.pos.y -= result.overlap.y;
+						if (e->has<CHand>())
+						{
+							auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+							hand->get<CTransform>().pos.y -= result.overlap.y;
+						}
+						break;
 					case '\0':
 						// For now enemies don't detect which direction they are colliding from.
 						entityTransform.pos -= entityTransform.velocity;
