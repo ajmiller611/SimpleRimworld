@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include "Scene_Level_Editor.h"
 #include "Scene_Menu.h"
 #include "GameEngine.h"
@@ -7,6 +9,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <cmath>
 
 Scene_Level_Editor::Scene_Level_Editor(GameEngine* gameEngine, const std::string& levelPath)
 	: Scene(gameEngine)
@@ -27,6 +30,8 @@ void Scene_Level_Editor::init()
 	registerAction(sf::Keyboard::S, "DOWN");
 	registerAction(sf::Keyboard::A, "LEFT");
 	registerAction(sf::Keyboard::D, "RIGHT");
+	registerAction(sf::Keyboard::E, "ROTATE_CLOCKWISE");
+	registerAction(sf::Keyboard::Q, "ROTATE_COUNTERCLOCKWISE");
 	registerAction(sf::Keyboard::Escape, "QUIT");
 
 	std::ifstream file("config.txt");
@@ -103,6 +108,27 @@ Vec2 Scene_Level_Editor::windowToWorld(const Vec2& window) const
 	return Vec2(window.x + wx, window.y + wy);
 }
 
+Vec2 Scene_Level_Editor::rotate(std::shared_ptr<Entity> e, float angle)
+{
+	float angleInRadians = angle * M_PI / 180;
+	auto& eTransform = e->get<CTransform>();
+	auto& bb = e->get<CBoundingBox>();
+
+	// bounding box pos when the point of rotation is translated to the origin
+	float translatedX = bb.pos.x - eTransform.pos.x;
+	float translatedY = bb.pos.y - eTransform.pos.y;
+
+	// apply the coordinate rotation formula
+	float rotatedX = translatedX * cos(angleInRadians) - translatedY * sin(angleInRadians);
+	float rotatedY = translatedX * sin(angleInRadians) + translatedY * cos(angleInRadians);
+
+	// translate the rotated point to where the point of rotation is
+	float rotatedTranslatedX = rotatedX + eTransform.pos.x;
+	float rotatedTranslatedY = rotatedY + eTransform.pos.y;
+
+	return Vec2(rotatedTranslatedX, rotatedTranslatedY);
+}
+
 void Scene_Level_Editor::update()
 {
 	m_entityManager.update();
@@ -163,6 +189,22 @@ void Scene_Level_Editor::sDoAction(const Action& action)
 		else if (action.name() == "DOWN") { }
 		else if (action.name() == "LEFT") { }
 		else if (action.name() == "RIGHT") { }
+		else if (action.name() == "ROTATE_CLOCKWISE") 
+		{ 
+			auto& transform = m_entityBeingDragged->get<CTransform>();
+			if (transform.angle >= 270) { transform.angle = 0; }
+			else						{ transform.angle += 90; }
+
+			m_entityBeingDragged->get<CBoundingBox>().pos = rotate(m_entityBeingDragged, 90);
+		}
+		else if (action.name() == "ROTATE_COUNTERCLOCKWISE")
+		{
+			auto& transform = m_entityBeingDragged->get<CTransform>();
+			if (transform.angle <= -270) { transform.angle = 0; }
+			else						 { transform.angle -= 90; }
+
+			m_entityBeingDragged->get<CBoundingBox>().pos = rotate(m_entityBeingDragged, -90);
+		}
 		else if (action.name() == "TOGGLE_TEXTURE") { m_drawTextures = !m_drawTextures; }
 		else if (action.name() == "TOGGLE_COLLISION") { m_drawCollision = !m_drawCollision; }
 		else if (action.name() == "TOGGLE_GRID") { m_drawGrid = !m_drawGrid; }
@@ -204,8 +246,9 @@ void Scene_Level_Editor::sDoAction(const Action& action)
 						dragging = !dragging;
 
 						// "snap" the entity to the grid position
+						Vec2 offset = m_entityBeingDragged->get<CTransform>().pos - gridOrigin;
 						m_entityBeingDragged->get<CTransform>().pos = gridOrigin;
-						m_entityBeingDragged->get<CBoundingBox>().pos = gridOrigin + m_entityBeingDragged->get<CBoundingBox>().offset;
+						m_entityBeingDragged->get<CBoundingBox>().pos -= offset;
 						
 						// entity is no longer being dragged
 						m_entityBeingDragged = nullptr;
@@ -250,8 +293,9 @@ void Scene_Level_Editor::sDragAndDrop()
 			auto& bb = e->get<CBoundingBox>();
 
 			Vec2 wPos = windowToWorld(m_mousePos);
-			e->get<CTransform>().pos = wPos;
-			e->get<CBoundingBox>().pos = Vec2(transform.pos.x + bb.offset.x, transform.pos.y + bb.offset.y);
+			Vec2 offset(wPos - transform.pos);
+			transform.pos = wPos;
+			bb.pos += offset;
 		}
 	}
 }
@@ -322,7 +366,7 @@ void Scene_Level_Editor::sGui()
 								Vec2 bbSize((float)abs(m_boundingBoxLeft - m_boundingBoxRight), (float)abs(m_boundingBoxTop - m_boundingBoxBottom));
 
 								// Since the origin of drawable objects is what this game engine uses to represent it's position, calculate the origin.
-								Vec2 bbOrigin(bbTopLeft.x + (bbSize.x / 2.0f), bbTopLeft.y + (bbSize.y / 2.0f));
+								Vec2 bbOrigin(round(bbTopLeft.x + (bbSize.x / 2.0f)), round(bbTopLeft.y + (bbSize.y / 2.0f)));
 
 								// The offset of the bounding box's origin from the entity's origin is needed to be able to update the bounding boxes position.
 								Vec2 bbOffset(bbOrigin.x - wPos.x, bbOrigin.y - wPos.y);
@@ -621,6 +665,7 @@ void Scene_Level_Editor::sRender()
 				rect.setSize(sf::Vector2f(box.size.x - 1, box.size.y - 1));
 				rect.setOrigin(sf::Vector2f(box.halfSize.x, box.halfSize.y));
 				rect.setPosition(box.pos.x, box.pos.y);
+				rect.setRotation(transform.angle);
 				rect.setFillColor(sf::Color(255, 0, 0, 0));
 
 				if (box.blockMove && box.blockVision) { rect.setOutlineColor(sf::Color::Black); }
