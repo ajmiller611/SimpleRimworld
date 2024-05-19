@@ -32,6 +32,7 @@ protected:
 	void init();
 	void loadLevel(const std::string& filename);
 	Vec2 windowToWorld(const Vec2& window) const;
+	Vec2 rotate(std::shared_ptr<Entity> e, float angle);
 	void update();
 	bool saveToFile(const char* filename);
 	void onEnd();
