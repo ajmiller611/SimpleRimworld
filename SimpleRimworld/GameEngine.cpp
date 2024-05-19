@@ -54,9 +54,11 @@ void GameEngine::run()
 {
 	while (isRunning())
 	{
-		update();
 		ImGui::SFML::Update(m_window, m_deltaClock.restart());
+		update();
+		ImGui::EndFrame();
 	}
+	ImGui::SFML::Shutdown();
 }
 
 void GameEngine::sUserInput()
