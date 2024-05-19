@@ -32,7 +32,7 @@ void Scene_Menu::init()
 
 void Scene_Menu::update()
 {
-	sRender();
+
 }
 
 void Scene_Menu::onEnd()
@@ -168,6 +168,4 @@ void Scene_Menu::sRender()
 
 	backText.setPosition(playText.getPosition().x + playText.getLocalBounds().width + 20, (float)window.getSize().y - 100);
 	window.draw(backText);
-
-	window.display();
 }
