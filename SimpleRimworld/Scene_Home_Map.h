@@ -1,7 +1,10 @@
 #pragma once
 
 #include "Scene.h"
+#include "variant"
 
+typedef std::vector<std::variant<CAnimation, CBoundingBox>> WeaponsVec;
+typedef std::map<std::string, WeaponsVec>	 WeaponsMap;
 
 class Scene_Home_Map : public Scene
 {
@@ -20,7 +23,7 @@ class Scene_Home_Map : public Scene
 
 protected:
 
-	std::shared_ptr<Entity>  m_block;
+	WeaponsMap				 m_weaponsMap;
 	std::string              m_levelPath;
 	std::string				 m_lastAction;
 	PlayerConfig             m_playerConfig;
@@ -34,9 +37,12 @@ protected:
 	void loadLevel(const std::string& filename);
 	std::shared_ptr<Entity> player();
 	void spawnPlayer();
+	void spawnWeapon(std::shared_ptr<Entity> e, const std::string& name);
 	void update();
 	void onEnd();
 	Collision collided(std::shared_ptr<Entity> a, std::shared_ptr<Entity> b);
+	void moveHand(std::shared_ptr<Entity> e);
+	void moveWeapon(std::shared_ptr<Entity> e);
 
 	void sDoAction(const Action& action);
 	void sMovement();

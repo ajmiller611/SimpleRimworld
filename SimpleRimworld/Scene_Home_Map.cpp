@@ -78,6 +78,23 @@ void Scene_Home_Map::loadLevel(const std::string& filename)
 			float y = gridY * m_gridSize.y + (m_gridSize.y / 2);
 			entity->add<CTransform>(Vec2(x, y));
 		}
+		else if (str == "Weapon")
+		{
+			// Variant allows this vector to hold multiple components even though they are different data types.
+			std::vector<std::variant<CAnimation, CBoundingBox>> weaponVec;
+
+			file >> str;
+			CAnimation anim(m_game->assets().getAnimation(str), true);
+			weaponVec.push_back(anim);
+			
+			float bbOffsetX, bbOffsetY, bbSizeX, bbSizeY;
+			file >> bbOffsetX >> bbOffsetY >> bbSizeX >> bbSizeY;
+			CBoundingBox bb(Vec2(0, 0), Vec2(bbOffsetX, bbOffsetY), Vec2(bbSizeX, bbSizeY));
+			weaponVec.push_back(bb);
+
+			// "str" still holds the animation name of the weapon which will be used as the key to identifiy weapons.
+			m_weaponsMap[str] = weaponVec;
+		}
 		else { std::cout << "Invalid entity type: " + str << "\n"; }
 	}
 }
@@ -97,9 +114,25 @@ void Scene_Home_Map::spawnPlayer()
 
 	auto hand = m_entityManager.addEntity("Decoration");
 	hand->add<CAnimation>(m_game->assets().getAnimation("GreenHand"), true);
-	hand->add<CTransform>(entity->get<CTransform>().pos + Vec2(28, 16));
+	hand->add<CTransform>(entity->get<CTransform>().pos + Vec2(16, -28));
 
 	entity->add<CHand>(hand->id(), Vec2(28, 16));
+}
+
+void Scene_Home_Map::spawnWeapon(std::shared_ptr<Entity> e, const std::string& name)
+{
+	auto weapon = m_entityManager.addEntity("Weapon");
+	e->get<CHand>().weaponID = weapon->id();
+
+	// Using the variant class template to get the animation. This could also be retrieved from the assets class.
+	weapon->add<CAnimation>(std::get<CAnimation>(m_weaponsMap[name].at(0)).animation, true);
+
+	auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+	weapon->add<CTransform>(hand->get<CTransform>().pos + Vec2(0, -e->get<CBoundingBox>().halfSize.y));
+
+	// get the bounding box positional data from the variant class template to create the weapon's bounding box
+	auto& bb = std::get<CBoundingBox>(m_weaponsMap[name].at(1));
+	weapon->add<CBoundingBox>(weapon->get<CTransform>().pos + bb.offset, Vec2(bb.offset.x, bb.offset.y), bb.size);
 }
 
 void Scene_Home_Map::update()
@@ -111,35 +144,113 @@ void Scene_Home_Map::update()
 	sGui();
 }
 
+void Scene_Home_Map::moveHand(std::shared_ptr<Entity> e)
+{
+	auto& eTransform = e->get<CTransform>();
+	auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+
+	Vec2 newHandPos = hand->get<CTransform>().pos;
+	float x = 0, y = 0;
+	if (eTransform.facing.x != 0)
+	{
+		x = eTransform.pos.x + (e->get<CHand>().offset.x * eTransform.facing.x);
+		y = eTransform.pos.y + (e->get<CHand>().offset.y * eTransform.facing.x);
+		newHandPos = Vec2(x, y);
+	}
+	else if (eTransform.facing.y != 0)
+	{
+		// For hand placement when facing up or down, the inverse of the offset is applied.
+		// To keep the hand representing the right side hand, the opposite of the y-offset is needed.
+		x = eTransform.pos.x + (-e->get<CHand>().offset.y * eTransform.facing.y);
+		y = eTransform.pos.y + (e->get<CHand>().offset.x * eTransform.facing.y);
+		newHandPos = Vec2(x, y);
+	}
+	hand->get<CTransform>().pos = newHandPos + eTransform.velocity;
+}
+
+void Scene_Home_Map::moveWeapon(std::shared_ptr<Entity> e)
+{
+	auto& eTransform = e->get<CTransform>();
+	auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+	auto weapon = m_entityManager.getEntity(e->get<CHand>().weaponID);
+	auto& wTransform = weapon->get<CTransform>();
+	auto& wBB = weapon->get<CBoundingBox>();
+	Vec2 offset = weapon->get<CBoundingBox>().offset;
+
+	if (eTransform.facing.x != 0)
+	{
+		wTransform.pos.x = hand->get<CTransform>().pos.x + (e->get<CBoundingBox>().halfSize.x * eTransform.facing.x);
+		wTransform.pos.y = hand->get<CTransform>().pos.y;
+
+		// entity facing right
+		if (eTransform.facing.x == 1)
+		{
+			wTransform.scale.x = eTransform.facing.x;
+			wTransform.angle = 90;
+			offset = Vec2(-wBB.offset.y, wBB.offset.x);
+		}
+		// entity facing left
+		else if (eTransform.facing.x == -1)
+		{
+			wTransform.scale.x = -eTransform.facing.x;
+			wTransform.angle = -90;
+			offset = Vec2(wBB.offset.y, -wBB.offset.x);
+		}
+	}
+	else if (eTransform.facing.y != 0)
+	{
+		wTransform.pos.x = hand->get<CTransform>().pos.x;
+		wTransform.pos.y = hand->get<CTransform>().pos.y + (e->get<CBoundingBox>().halfSize.y * eTransform.facing.y);
+
+		// entity facing down
+		if (eTransform.facing.y == 1)
+		{
+			wTransform.scale.y = eTransform.facing.y;
+			wTransform.angle = 180;
+			offset = Vec2(-wBB.offset.x, -wBB.offset.y);
+		}
+		// entity facing up
+		else if (eTransform.facing.y == -1)
+		{
+			wTransform.scale.y = -eTransform.facing.y;
+			wTransform.angle = 0;
+			offset = Vec2(wBB.offset.x, wBB.offset.y);
+		}
+	}
+
+	weapon->get<CTransform>().pos += eTransform.velocity;
+	weapon->get<CBoundingBox>().pos = weapon->get<CTransform>().pos + offset + eTransform.velocity;
+}
+
 void Scene_Home_Map::sMovement()
 {
 	auto& pInput = player()->get<CInput>();
 	auto& pTransform = player()->get<CTransform>();
 	pTransform.prevPos = pTransform.pos;
-	Vec2 playerVelocity(0, 0);
+	Vec2 pVelocity(0, 0);
 
 	if (pInput.up)
 	{
-		playerVelocity.y -= 3;
+		pVelocity.y -= 3;
 		pTransform.facing = Vec2(0, -1);
 	}
 	else if (pInput.down)
 	{
-		playerVelocity.y += 3;
+		pVelocity.y += 3;
 		pTransform.facing = Vec2(0, 1);
 	}
 	else if (pInput.left)
 	{
-		playerVelocity.x -= 3;
+		pVelocity.x -= 3;
 		pTransform.facing = Vec2(-1, 0);
 	}
 	else if (pInput.right)
 	{
-		playerVelocity.x += 3;
+		pVelocity.x += 3;
 		pTransform.facing = Vec2(1, 0);
 	}
 
-	pTransform.velocity = playerVelocity;
+	pTransform.velocity = pVelocity;
 
 	// Update the entities positions
 	for (auto& e : m_entityManager.getEntities())
@@ -150,25 +261,12 @@ void Scene_Home_Map::sMovement()
 
 		if (e->has<CHand>())
 		{
-			auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+			moveHand(e);
 
-			Vec2 newPos = hand->get<CTransform>().pos;
-			float x = 0, y = 0;
-			if (eTransform.facing.x != 0)
+			if (e->get<CHand>().weaponID >= 0)
 			{
-				x = eTransform.pos.x + (e->get<CHand>().offset.x * eTransform.facing.x);
-				y = eTransform.pos.y + (e->get<CHand>().offset.y * eTransform.facing.x);
-				newPos = Vec2(x, y);
+				moveWeapon(e);
 			}
-			else if (eTransform.facing.y != 0)
-			{
-				// For hand placement when facing up or down, the inverse of the offset is applied.
-				// To keep the hand representing the right side hand, the opposite of the y-offset is needed.
-				x = eTransform.pos.x + (-e->get<CHand>().offset.y * eTransform.facing.y);
-				y = eTransform.pos.y + (e->get<CHand>().offset.x * eTransform.facing.y);
-				newPos = Vec2(x, y);
-			}
-			hand->get<CTransform>().pos = newPos + eTransform.velocity;
 		}
 	}
 }
@@ -392,7 +490,6 @@ void Scene_Home_Map::sGui()
 				}
 				if (ImGui::CollapsingHeader("decoration"))
 				{
-					// check for the key named "Tile" is existing in map before querying the map
 					if (m_entityManager.getEntityMap().find("Decoration") != m_entityManager.getEntityMap().end())
 					{
 						ImGui::Indent(20.0f);
@@ -415,9 +512,32 @@ void Scene_Home_Map::sGui()
 						ImGui::Unindent(20.0f);
 					}
 				}
+				if (ImGui::CollapsingHeader("weapons"))
+				{
+					if (m_entityManager.getEntityMap().find("Weapon") != m_entityManager.getEntityMap().end())
+					{
+						ImGui::Indent(20.0f);
+						for (auto& e : m_entityManager.getEntityMap().at("Weapon"))
+						{
+							if (ImGui::Button(("D##" + std::to_string(e->id())).c_str()))
+							{
+								e->destroy();
+							}
+							ImGui::SameLine();
+							ImGui::Text(std::to_string(e->id()).c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->tag().c_str());
+							ImGui::SameLine();
+							ImGui::Text(e->get<CAnimation>().animation.getName().c_str());
+							ImGui::SameLine();
+							ImGui::Text(("(" + std::to_string((int)e->get<CTransform>().pos.x) + "," +
+								std::to_string((int)e->get<CTransform>().pos.y) + ")").c_str());
+						}
+						ImGui::Unindent(20.0f);
+					}
+				}
 				if (ImGui::CollapsingHeader("enemies"))
 				{
-					// check for the key named "bullet" is existing in map before querying the map
 					if (m_entityManager.getEntityMap().find("Enemies") != m_entityManager.getEntityMap().end())
 					{
 						ImGui::Indent(20.0f);
@@ -443,7 +563,6 @@ void Scene_Home_Map::sGui()
 				
 				if (ImGui::CollapsingHeader("player"))
 				{
-					// check for the key named "Player" is existing in map before querying the map
 					if (m_entityManager.getEntityMap().find("Player") != m_entityManager.getEntityMap().end())
 					{
 						ImGui::Indent(20.0f);
@@ -570,6 +689,7 @@ void Scene_Home_Map::sRender()
 				rect.setSize(sf::Vector2f(box.size.x - 1, box.size.y - 1));
 				rect.setOrigin(sf::Vector2f(box.halfSize.x, box.halfSize.y));
 				rect.setPosition(box.pos.x, box.pos.y);
+				rect.setRotation(transform.angle);
 				rect.setFillColor(sf::Color(0, 0, 0, 0));
 
 				if (box.blockMove && box.blockVision) { rect.setOutlineColor(sf::Color::Red); }

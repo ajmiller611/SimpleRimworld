@@ -15,7 +15,7 @@ public:
 	Vec2 prevPos = { 0.0, 0.0 };
 	Vec2 scale = { 1.0, 1.0 };
 	Vec2 velocity = { 0.0, 0.0 };
-	Vec2 facing = { 0.0, 1.0 };
+	Vec2 facing = { 0.0, 0.0 };
 	float angle = 0;
 
 	CTransform() {}
@@ -142,6 +142,7 @@ class CHand : public Component
 {
 public:
 	size_t entityID = 0;
+	int weaponID = -1;
 	Vec2 offset = { 0, 0 };
 	CHand() {}
 	CHand(size_t e, Vec2 o)

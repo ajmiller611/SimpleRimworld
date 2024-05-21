@@ -63,6 +63,12 @@ Decoration N GX GY
 	Grid X Position		X			float
 	Grid Y Position		Y			float
 
+Weapon:
+Weapon N OX OY BW BH
+	Animation Name		N			std::string (no spaces)
+	Bounding Box Offset	OX, OY		float, float
+	Bounding Box Size	BW, BH		float, float
+
 Controlled Character:
 Player X Y BW BH S H
 	Starting Spawn Pos	X Y			int, int
