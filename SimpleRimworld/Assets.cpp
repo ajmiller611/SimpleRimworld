@@ -51,6 +51,7 @@ void Assets::loadFromFile(const std::string& path)
 			std::istringstream iss(tempVector[2]);
 			size_t frameCount, interval;
 			iss >> frameCount;
+			iss.clear();
 			iss.str(tempVector[3]);
 			iss >> interval;
 			addAnimation(tempVector[0], tempVector[1], frameCount, interval);

@@ -31,6 +31,7 @@ void Scene_Home_Map::init(const std::string& levelPath)
 	registerAction(sf::Keyboard::S, "DOWN");
 	registerAction(sf::Keyboard::A, "LEFT");
 	registerAction(sf::Keyboard::D, "RIGHT");
+	registerAction(sf::Keyboard::Space, "ATTACK");
 
 	spawnPlayer();
 }
@@ -117,6 +118,7 @@ void Scene_Home_Map::spawnPlayer()
 	hand->add<CTransform>(entity->get<CTransform>().pos + Vec2(16, -28));
 
 	entity->add<CHand>(hand->id(), Vec2(28, 16));
+	entity->add<CState>("StandDown");
 }
 
 void Scene_Home_Map::spawnWeapon(std::shared_ptr<Entity> e, const std::string& name)
@@ -133,6 +135,8 @@ void Scene_Home_Map::spawnWeapon(std::shared_ptr<Entity> e, const std::string& n
 	// get the bounding box positional data from the variant class template to create the weapon's bounding box
 	auto& bb = std::get<CBoundingBox>(m_weaponsMap[name].at(1));
 	weapon->add<CBoundingBox>(weapon->get<CTransform>().pos + bb.offset, Vec2(bb.offset.x, bb.offset.y), bb.size);
+
+	weapon->add<CLifespan>(10, (int)m_currentFrame);
 }
 
 void Scene_Home_Map::update()
@@ -140,7 +144,11 @@ void Scene_Home_Map::update()
 	m_entityManager.update();
 
 	sMovement();
+	sStatus();
 	sCollision();
+	sAnimation();
+	m_currentFrame++;
+
 	sGui();
 }
 
@@ -278,7 +286,22 @@ void Scene_Home_Map::sAI()
 
 void Scene_Home_Map::sStatus()
 {
-	
+	for (auto& e : m_entityManager.getEntities())
+	{
+		if (!e->has<CLifespan>()) {
+			continue;
+		}
+
+		if (e->get<CLifespan>().lifespan > 0 && e->isActive())
+		{
+			e->get<CLifespan>().lifespan--;
+		}
+		if (e->get<CLifespan>().lifespan == 0)
+		{
+			e->destroy();
+			player()->get<CHand>().weaponID = -1;
+		}
+	}
 }
 
 Scene_Home_Map::Collision Scene_Home_Map::collided(std::shared_ptr<Entity> a, std::shared_ptr<Entity> b)
@@ -381,27 +404,124 @@ void Scene_Home_Map::sDoAction(const Action& action)
 {
 	if (action.type() == "START")
 	{
-		if (action.name() == "UP") { player()->get<CInput>().up = true; }
-		else if (action.name() == "DOWN") { player()->get<CInput>().down = true; }
-		else if (action.name() == "LEFT") { player()->get<CInput>().left = true; }
-		else if (action.name() == "RIGHT") { player()->get<CInput>().right = true; }
-		else if (action.name() == "TOGGLE_TEXTURE") { m_drawTextures = !m_drawTextures; }
-		else if (action.name() == "TOGGLE_COLLISION") { m_drawCollision = !m_drawCollision; }
-		else if (action.name() == "TOGGLE_GRID") { m_drawGrid = !m_drawGrid; }
-		else if (action.name() == "QUIT") { onEnd(); }
+			 if (action.name() == "UP")					{ player()->get<CInput>().up = true; }
+		else if (action.name() == "DOWN")				{ player()->get<CInput>().down = true; }
+		else if (action.name() == "LEFT")				{ player()->get<CInput>().left = true; }
+		else if (action.name() == "RIGHT")				{ player()->get<CInput>().right = true; }
+		else if (action.name() == "TOGGLE_TEXTURE")		{ m_drawTextures = !m_drawTextures; }
+		else if (action.name() == "TOGGLE_COLLISION")	{ m_drawCollision = !m_drawCollision; }
+		else if (action.name() == "TOGGLE_GRID")		{ m_drawGrid = !m_drawGrid; }
+		else if (action.name() == "QUIT")				{ onEnd(); }
+		else if (action.name() == "ATTACK")
+		{
+			if (!player()->get<CInput>().attack)
+			{
+				if (player()->get<CHand>().weaponID < 0)
+				{
+					if (player()->get<CInput>().canAttack)
+					{
+						spawnWeapon(player(), "WeaponLongsword");
+						if (player()->get<CTransform>().facing.x != 0)
+						{
+							if (player()->get<CTransform>().facing.x == -1) { player()->get<CState>().state = "AtkLeft"; }
+							if (player()->get<CTransform>().facing.x == 1) { player()->get<CState>().state = "AtkRight"; }
+						}
+						if (player()->get<CTransform>().facing.y != 0)
+						{
+							if (player()->get<CTransform>().facing.y == -1) { player()->get<CState>().state = "AtkUp"; }
+							if (player()->get<CTransform>().facing.y == 1) { player()->get<CState>().state = "AtkDown"; }
+						}
+					}
+					player()->get<CInput>().canAttack = false;
+					player()->get<CInput>().attack = true;
+				}
+			}
+		}
 	}
 	else if (action.type() == "END")
 	{
-		if (action.name() == "UP") { player()->get<CInput>().up = false; }
-		else if (action.name() == "DOWN") { player()->get<CInput>().down = false; }
-		else if (action.name() == "LEFT") { player()->get<CInput>().left = false; }
-		else if (action.name() == "RIGHT") { player()->get<CInput>().right = false; }
+			 if (action.name() == "UP")		{ player()->get<CInput>().up = false; }
+		else if (action.name() == "DOWN")	{ player()->get<CInput>().down = false; }
+		else if (action.name() == "LEFT")	{ player()->get<CInput>().left = false; }
+		else if (action.name() == "RIGHT")  { player()->get<CInput>().right = false; }
+		else if (action.name() == "ATTACK") { player()->get<CInput>().attack = false; }
 	}
 }
 
 void Scene_Home_Map::sAnimation()
 {
-	
+	auto& pTransform = player()->get<CTransform>();
+	auto& pAnimation = player()->get<CAnimation>();
+	auto& pState = player()->get<CState>();
+	enum class State { SD, SU, SR, SL, AD, AU, AR, AL };
+	std::map<std::string, State> stringToEnumMap =
+	{
+		{ "StandDown", State::SD }, { "StandUp", State::SU }, { "StandRight", State::SR }, { "StandLeft", State::SL },
+		{ "AtkDown", State::AD }, { "AtkUp", State::AU }, { "AtkRight", State::AR }, { "AtkLeft", State::AL },
+	};
+	State state = stringToEnumMap[pState.state];
+	if (player()->get<CHand>().weaponID >= 0)
+	{
+		auto weapon = m_entityManager.getEntity(player()->get<CHand>().weaponID);
+		switch (state)
+		{
+		case State::SD:
+			break;
+		case State::SU:
+			break;
+		case State::SR:
+			break;
+		case State::SL:
+			break;
+		case State::AD:
+			break;
+		case State::AU:
+			break;
+		case State::AR:
+			break;
+		case State::AL:
+			break;
+		default:
+			std::cerr << "Invalid state during look up of an animation.";
+			break;
+		}
+	}
+
+	for (auto& e : m_entityManager.getEntities())
+	{
+		if (e->get<CAnimation>().animation.hasEnded() && !e->get<CAnimation>().repeat)
+		{
+			e->destroy();
+
+			// set the hand back to an emtpy state when a weapon animation has ended
+			if (player()->get<CHand>().weaponID == e->id())
+			{
+				player()->get<CHand>().weaponID = -1;
+			}
+		}
+		else
+		{
+			e->get<CAnimation>().animation.update();
+		}
+
+		if (e->tag() == "Weapon")
+		{
+			if (!e->isActive())
+			{
+				if (player()->get<CTransform>().facing.x != 0)
+				{
+					if (player()->get<CTransform>().facing.x == -1) { player()->get<CState>().state = "StandLeft"; }
+					if (player()->get<CTransform>().facing.x == 1) { player()->get<CState>().state = "StandRight"; }
+				}
+				if (player()->get<CTransform>().facing.y != 0)
+				{
+					if (player()->get<CTransform>().facing.y == -1) { player()->get<CState>().state = "StandUp"; }
+					if (player()->get<CTransform>().facing.y == 1) { player()->get<CState>().state = "StandDown"; }
+				}
+				player()->get<CInput>().canAttack = true;
+			}
+		}
+	}
 }
 
 void Scene_Home_Map::sCamera()

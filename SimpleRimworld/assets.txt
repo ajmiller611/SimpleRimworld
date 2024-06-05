@@ -1,5 +1,7 @@
 Tilesheet Scribble images/tilesheet.png TexTile TexTiles TexTilesCorner TexTilesCenter TexTilesDecorative TexTilesCracked TexWood TexWater TexRedCharacter TexWeaponDagger TexWeaponAxeBlades TexFloorPathCurve TexFloorPath TexFloorPathCrossing TexFloorTrackCurve TexFloorTrack TexFloorTrackCrossing TexFloorTrackCart TexFloorCart TexRedHand TexWeaponSword TexWeaponAxeLarge TexFloorWallCorner TexFloorWallCurve TexFloorWallDiagonal TexFloorWallEdge TexFloorInnerRound TexFloorInnerDiagonal TexFloorInnerLongRound TexFloorInnerLongDiagonal TexPurpleCharacter TexWeaponLongsword TexWeaponAxeDouble TexFloorWall TexFloorWallHalf TexFloorWallDamaged TexFloorWallSecret TexFloorWallTrap TexFloorWallDemolished TexFloorTrapdoorSquare TexFloorTrapdoorRound TexPurpleHand TexWeaponPole TexWeaponAxe TexFloorDoorClosed TexFloorDoorway TexFloorDoorOpen TexFloorTrap TexFloorChest TexFloorCampfire TexFloorPlants TexFloorTree TexYellowCharacter TexWeaponSpear TexWeaponHammer TexFloorCrateSmall TexFloorBarrel TexFloorBarrels TexFloorBarrelsStacked TexFloorArrowCurve TexFloorArrow TexFloorArrowHead TexFloorArrowCircle TexYellowHand TexWeaponBowArrow TexWeaponStaff TexFloorTable TexFloorChair TexFloorPlanks TexFloorBedLuxurious TexFloorBed TexFloorCoffin TexFloorPuddle TexFloorDragon TexGreenCharacter TexWeaponBow TexShieldCurved TexGrass TexCrate TexTrapDoor TexStairDown TexStairDownDetail TexBridge TexBridgeEnd TexCarpet TexGreenHand TexWeaponArrow TexShieldStraight TexPathCurve TexPath TexPathCrossing TexTrackCurve TexTrack TexTrackCrossing TexTrackCart TexCart TexWallCorner TexWallCurve TexWallDiagonal TexWallEdge TexInnerRound TexInnerDiagonal TexInnerLongRound TexInnerLongDiagonal TexWall TexWallHalf TexWallDamaged TexWallSecret TexWallTrap TexWallDemolished TexTrapdoorSqaure TexTrapdoorRound TexDoorClosed TexDoorway TexDoorOpen TexTrap TexChest TexCampfire TexPlants TexTree TexCrateSmall TexBarrel TexBarrels TexBarrelsStacked TexArrowCurve TexArrow TexArrowHead TexArrowCircle TexTable TexChair TexPlanks TexBedLuxurious TexBed TexCoffin TexPuddle TexDragon
 Tilesheet Food images/Food64x64.png TexCookie TexSaki TexEggs TexCheese TexTomato TexPretzel TexMelonWater TexAvocado TexBrownie TexBoar TexHoneycomb TexChicken TexStrawberry TexPepperoni TexFishSteak TexWaffles TexStein TexMarmalade TexPineapple TexBread TexPeach TexFishFillet TexChickenLeg TexBug TexMoonshine TexJam TexBacon TexEggplant TexLemon TexHoney TexCherry TexOlive TexWhiskey TexApple TexBeer TexPepperRed TexPiePumpkin TexJerky TexRibs TexPickledEggs TexTart TexAppleWorm TexSteak TexPepperGreen TexPieLemon TexPotatoRed TexSardines TexRoll TexSushi TexTurnip TexWine TexGrubs TexPieApple TexMelonHoneydew TexDragonFruit TexOnion TexSashimi TexPotato TexFish TexGrub TexPickle TexMelonCantaloupe TexSausages TexShrimp
+Texture TexWeaponLongswordSlash images/sword_slash.png
+Texture TexExplosion images/explosion32.png
 Animation Arrow					 TexArrow				   1 0
 Animation ArrowCircle			 TexArrowCircle			   1 0
 Animation ArrowCurve			 TexArrowCurve			   1 0
@@ -129,6 +131,7 @@ Animation WeaponBowArrow		 TexWeaponBowArrow		   1 0
 Animation WeaponDagger			 TexWeaponDagger		   1 0
 Animation WeaponHammer			 TexWeaponHammer		   1 0
 Animation WeaponLongsword		 TexWeaponLongsword		   1 0
+Animation WeaponLongswordSlash	 TexWeaponLongswordSlash   10 2
 Animation WeaponPole			 TexWeaponPole			   1 0
 Animation WeaponSpear			 TexWeaponSpear			   1 0
 Animation WeaponStaff			 TexWeaponStaff			   1 0
@@ -136,4 +139,5 @@ Animation WeaponSword			 TexWeaponSword			   1 0
 Animation Wood					 TexWood				   1 0
 Animation YellowCharacter		 TexYellowCharacter		   1 0
 Animation YellowHand			 TexYellowHand			   1 0
+Animation Explosion TexExplosion 3 20
 Font Tech techfont/Techfont.ttf
