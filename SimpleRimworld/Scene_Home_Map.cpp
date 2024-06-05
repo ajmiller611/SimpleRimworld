@@ -235,6 +235,7 @@ void Scene_Home_Map::sMovement()
 	auto& pInput = player()->get<CInput>();
 	auto& pTransform = player()->get<CTransform>();
 	auto& pState = player()->get<CState>();
+	auto& pInput = player()->get<CInput>();
 	pTransform.prevPos = pTransform.pos;
 	Vec2 pVelocity(0, 0);
 
@@ -242,40 +243,40 @@ void Scene_Home_Map::sMovement()
 	{
 		pVelocity.y -= 3;
 		pTransform.facing = Vec2(0, -1);
-		if (player()->get<CInput>().canAttack) { pState.state = "RunUp"; }
+		if (pInput.canAttack) { pState.state = "RunUp"; }
 	}
 	else if (pInput.down)
 	{
 		pVelocity.y += 3;
 		pTransform.facing = Vec2(0, 1);
-		if (player()->get<CInput>().canAttack) { pState.state = "RunDown"; }
+		if (pInput.canAttack) { pState.state = "RunDown"; }
 	}
 	else if (pInput.left)
 	{
 		pVelocity.x -= 3;
 		pTransform.facing = Vec2(-1, 0);
-		if (player()->get<CInput>().canAttack) { pState.state = "RunLeft"; }
+		if (pInput.canAttack) { pState.state = "RunLeft"; }
 	}
 	else if (pInput.right)
 	{
 		pVelocity.x += 3;
 		pTransform.facing = Vec2(1, 0);
-		if (player()->get<CInput>().canAttack) { pState.state = "RunRight"; }
+		if (pInput.canAttack) { pState.state = "RunRight"; }
 	}
 
 	pTransform.velocity = pVelocity;
 
-	if (pTransform.velocity == Vec2(0, 0) && player()->get<CInput>().canAttack)
+	if (pTransform.velocity == Vec2(0, 0) && pInput.canAttack)
 	{
 		if (pTransform.facing.x != 0)
 		{
-			if (pTransform.facing.x == -1) { player()->get<CState>().state = "StandLeft"; }
-			if (pTransform.facing.x == 1)  { player()->get<CState>().state = "StandRight"; }
+			if (pTransform.facing.x == -1) { pState.state = "StandLeft"; }
+			if (pTransform.facing.x == 1)  { pState.state = "StandRight"; }
 		}
 		if (pTransform.facing.y != 0)
 		{
-			if (pTransform.facing.y == -1) { player()->get<CState>().state = "StandUp"; }
-			if (pTransform.facing.y == 1)  { player()->get<CState>().state = "StandDown"; }
+			if (pTransform.facing.y == -1) { pState.state = "StandUp"; }
+			if (pTransform.facing.y == 1)  { pState.state = "StandDown"; }
 		}
 	}
 
