@@ -419,11 +419,129 @@ void Scene_Home_Map::sGui()
 	ImGui::Begin("Assests and Debug");
 	if (ImGui::BeginTabBar("Tab Bar"))
 	{
+		if (ImGui::BeginTabItem("Player Info"))
+		{
+			ImGui::SeparatorText("Entity Info");
+			ImGui::Text(("Entity ID: " + std::to_string(player()->id())).c_str());
+			ImGui::Text(("Tag: " + player()->tag()).c_str());
+			ImGui::Text(("IsActive: " + std::to_string(player()->isActive())).c_str());
+
+			for (auto& component : player()->getComponentList())
+			{
+				if (component == "CTransform")
+				{
+					ImGui::SeparatorText("Transform");
+					ImGui::Text(("Position X: " + std::to_string(player()->get<CTransform>().pos.x) + " ").c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Y: " + std::to_string(player()->get<CTransform>().pos.y)).c_str());
+
+					ImGui::Text(("Scale X: " + std::to_string(player()->get<CTransform>().scale.x) + " ").c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Y: " + std::to_string(player()->get<CTransform>().scale.y)).c_str());
+
+					ImGui::Text(("Velocity X: " + std::to_string(player()->get<CTransform>().velocity.x) + " ").c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Y: " + std::to_string(player()->get<CTransform>().velocity.y)).c_str());
+
+					ImGui::Text(("Facing X: " + std::to_string(player()->get<CTransform>().facing.x) + " ").c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Y: " + std::to_string(player()->get<CTransform>().facing.y)).c_str());
+				}
+				else if (component == "CInput")
+				{
+					ImGui::SeparatorText("Input");
+					ImGui::Text(("Up: " + std::to_string(player()->get<CInput>().up)).c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Down: " + std::to_string(player()->get<CInput>().down)).c_str());
+
+					ImGui::Text(("Left: " + std::to_string(player()->get<CInput>().left)).c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Right: " + std::to_string(player()->get<CInput>().right)).c_str());
+
+					ImGui::Text(("Attack: " + std::to_string(player()->get<CInput>().attack)).c_str());
+					ImGui::SameLine();
+					ImGui::Text(("CanAttack: " + std::to_string(player()->get<CInput>().canAttack)).c_str());
+				}
+				else if (component == "CLifespan")
+				{
+					ImGui::SeparatorText("Lifespan");
+					ImGui::Text(("Lifespan: " + std::to_string(player()->get<CLifespan>().lifespan)).c_str());
+					ImGui::Text(("Frame Created: " + std::to_string(player()->get<CLifespan>().frameCreated)).c_str());
+				}
+				else if (component == "CDamage")
+				{
+					ImGui::SeparatorText("Damage");
+					ImGui::Text(("Damage: " + std::to_string(player()->get<CDamage>().damage)).c_str());
+				}
+				else if (component == "CInvincibility")
+				{
+					ImGui::SeparatorText("Invincibility");
+					ImGui::Text(("iFrames: " + std::to_string(player()->get<CInvincibility>().iframes)).c_str());
+				}
+				else if (component == "CHealth")
+				{
+					ImGui::SeparatorText("Health");
+					ImGui::Text(("Max: " + std::to_string(player()->get<CHealth>().max)).c_str());
+					ImGui::Text(("Current: " + std::to_string(player()->get<CHealth>().current)).c_str());
+				}
+				else if (component == "CAnimation")
+				{
+					ImGui::SeparatorText("Animation");
+					ImGui::Text(("Name: " + player()->get<CAnimation>().animation.getName()).c_str());
+
+					ImGui::Text(("Size X: " + std::to_string(player()->get<CAnimation>().animation.getSize().x)).c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Y: " + std::to_string(player()->get<CAnimation>().animation.getSize().y)).c_str());
+
+					ImGui::Text(("Repeat: " + std::to_string(player()->get<CAnimation>().repeat)).c_str());
+				}
+				else if (component == "CState")
+				{
+					ImGui::SeparatorText("State");
+					ImGui::Text(("State: " + player()->get<CState>().state).c_str());
+				}
+				else if (component == "CBoundingBox")
+				{
+					ImGui::SeparatorText("BoundingBox");
+					ImGui::Text(("Position X: " + std::to_string(player()->get<CBoundingBox>().pos.x) + " ").c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Y: " + std::to_string(player()->get<CBoundingBox>().pos.y)).c_str());
+
+					ImGui::Text(("Offset X: " + std::to_string(player()->get<CBoundingBox>().offset.x) + " ").c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Y: " + std::to_string(player()->get<CBoundingBox>().offset.y)).c_str());
+
+					ImGui::Text(("Size X: " + std::to_string(player()->get<CBoundingBox>().size.x) + " ").c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Y: " + std::to_string(player()->get<CBoundingBox>().size.y)).c_str());
+
+					ImGui::Text(("Block Move: " + std::to_string(player()->get<CBoundingBox>().blockMove)).c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Block Vision: " + std::to_string(player()->get<CBoundingBox>().blockVision)).c_str());
+				}
+				else if (component == "CDraggable")
+				{
+					ImGui::SeparatorText("Draggable");
+					ImGui::Text(("Draggable: " + std::to_string(player()->get<CDraggable>().dragging)).c_str());
+				}
+				else if (component == "CHand")
+				{
+					ImGui::SeparatorText("Hand");
+					ImGui::Text(("Entity ID: " + std::to_string(player()->get<CHand>().entityID)).c_str());
+					ImGui::Text(("Weapon ID: " + std::to_string(player()->get<CHand>().weaponID)).c_str());
+
+					ImGui::Text(("Offset X: " + std::to_string(player()->get<CHand>().offset.x) + " ").c_str());
+					ImGui::SameLine();
+					ImGui::Text(("Y: " + std::to_string(player()->get<CHand>().offset.y)).c_str());
+				}
+			}
+			ImGui::EndTabItem();
+		}
 		if (ImGui::BeginTabItem("Debug"))
 		{
 			ImGui::Checkbox("Draw Grid", &m_drawGrid);
 			ImGui::Checkbox("Draw Textures", &m_drawTextures);
-			ImGui::Checkbox("Draw Debug", &m_drawCollision);
+			ImGui::Checkbox("Draw Collision", &m_drawCollision);
 			ImGui::EndTabItem();
 		}
 		if (ImGui::BeginTabItem("Animations"))

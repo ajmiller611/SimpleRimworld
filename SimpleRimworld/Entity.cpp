@@ -26,3 +26,10 @@ const std::string& Entity::tag() const
 {
 	return m_tag;
 }
+
+std::vector<std::string> Entity::getComponentList()
+{
+	m_componentList.clear();
+	this->getComponents();
+	return m_componentList;
+}
