@@ -51,6 +51,7 @@ protected:
 	void sAnimation();
 	void sCollision();
 	void sCamera();
+	void displayEntityData(std::shared_ptr<Entity> e);
 	void sGui();
 
 public:
