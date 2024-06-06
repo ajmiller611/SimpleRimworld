@@ -119,13 +119,34 @@ void Scene_Home_Map::loadLevel(const std::string& filename)
 
 			entity->add<CHand>(hand->id(), Vec2(28, 16));
 
-			int speed, hp;
-			file >> speed >> hp;
+			int hp;
+			file >> hp;
 			entity->add<CHealth>(hp, hp);
 
 			std::string weapon;
 			file >> weapon;
 			spawnWeapon(entity, weapon);
+
+			float speed;
+			file >> str >> speed;
+			if (str == "Follow")
+			{
+				entity->add<CFollowPlayer>(entity->get<CTransform>().pos, speed);
+			}
+			if (str == "Patrol")
+			{
+				int numPositions, gx, gy;
+				std::vector<Vec2> positions;
+				file >> numPositions;
+				for (size_t i = 0; i < numPositions; i++)
+				{
+					file >> gx >> gy;
+					float x = gx * m_gridSize.x + (m_gridSize.x / 2);
+					float y = gy * m_gridSize.y + (m_gridSize.y / 2);
+					positions.push_back(Vec2(x, y));
+				}
+				entity->add<CPatrol>(positions, speed);
+			}
 		}
 		else { std::cout << "Invalid entity type: " + str << "\n"; }
 	}
@@ -173,6 +194,7 @@ void Scene_Home_Map::update()
 {
 	m_entityManager.update();
 
+	sAI();
 	sMovement();
 	sStatus();
 	sCollision();
@@ -330,7 +352,88 @@ void Scene_Home_Map::sMovement()
 
 void Scene_Home_Map::sAI()
 {
+	for (auto& e : m_entityManager.getEntityMap().at("Enemy"))
+	{
+		if (e->has<CPatrol>())
+		{
+			auto& patrol = e->get<CPatrol>();
+			Vec2 destination = (patrol.currentPosition + 1 == patrol.positions.size()) ? patrol.positions[0] : patrol.positions[patrol.currentPosition + 1];
 
+			// Calculate the distance between the origin and destination.
+			float distance = e->get<CTransform>().pos.dist(destination);
+
+			// A check on if the entity is close enough to the patrol point is needed to avoid the entity moving
+			// past the patrol point. Adding the velocity to the the position can cause the entity to not
+			// be able to reach the exact coordinate of the patrol point. This is avoided by allowing the entity
+			// to go to the next patrol when deemed close enough to have reached the patrol point.
+			if (distance < 5) { patrol.currentPosition++; }
+			if (patrol.currentPosition == patrol.positions.size()) { patrol.currentPosition = 0; }
+
+			// Normalize the difference vector to get a unit vector. 
+			Vec2 diff = patrol.positions[patrol.currentPosition].difference(destination).normalize();
+
+			// Since normalize involves division and when the difference vector is (0, 0), the result is
+			// a undefined or NaN vector due to the division by zero. This is a vector with a length of zero so change the
+			// difference vector to (0, 0) so velocity can still be calculated.
+			if (isnan(diff.x) || isnan(diff.y)) { diff = Vec2(0, 0); }
+
+			e->get<CTransform>().velocity = Vec2(patrol.speed * diff.x, patrol.speed * diff.y);
+		}
+
+		if (e->has<CFollowPlayer>())
+		{
+			bool visionBlocked = false;
+			auto& follow = e->get<CFollowPlayer>();
+			auto& transform = e->get<CTransform>();
+			for (auto& entity : m_entityManager.getEntities())
+			{
+				// Skip the player entity and the current enemy being proccessed.
+				// The current enemy doesn't need to be compared to itself when iterating through all the entities.
+				// If it did compare itself then it's bounding box would always block it's vision.
+				if (entity->tag() != "player" && entity->id() != e->id())
+				{
+					if (entity->get<CBoundingBox>().blockVision)
+					{
+						Physics phy;
+						// Entity Intersection means vision is blocked and the enemy should return to its home point.
+						if (phy.EntityIntersect(player()->get<CTransform>().pos, transform.pos, entity))
+						{
+							visionBlocked = true;
+							// Break out of the loop once an entity is detected to be blocking vision.
+							break;
+						}
+						// Using a boolean flag to represent when vision isn't blocked allows the logic (moving enemy to the player)
+						// to be moved outside of the loop to be done once instead of every time an entity doesn't block vision.
+						else { visionBlocked = false; }
+					}
+				}
+			}
+
+			Vec2 destination, differ;
+			float angle = 0;
+			if (visionBlocked)
+			{
+				destination = follow.home;
+				differ = transform.pos.difference(destination);
+
+				// Velocity can also be calculated with trigonmetry. The angle can be found using the tangent.
+				angle = atan2f(differ.y, differ.x);
+
+				// Slow the speed as the enemy gets close to the home point so the exact position can be reached
+				float distance = transform.pos.dist(destination);
+				if (distance > follow.speed) { transform.velocity = Vec2(follow.speed * cos(angle), follow.speed * sin(angle)); }
+				else { transform.velocity = Vec2(distance / 2 * cos(angle), distance / 2 * sin(angle)); }
+			}
+			else
+			{
+				// Enemy can see the player so the enemy moves towards the player's position.
+				destination = player()->get<CTransform>().pos;
+				differ = transform.pos.difference(destination);
+				angle = atan2f(differ.y, differ.x);
+				transform.velocity = Vec2(follow.speed * cos(angle), follow.speed * sin(angle));
+			}
+		}
+	}
 }
 
 void Scene_Home_Map::sStatus()
@@ -442,6 +545,17 @@ void Scene_Home_Map::sCollision()
 					case '\0':
 						// For now enemies don't detect which direction they are colliding from.
 						entityTransform.pos -= entityTransform.velocity;
+						entityBoundingBox.pos -= entityTransform.velocity;
+						if (e->has<CHand>())
+						{
+							auto hand = m_entityManager.getEntity(e->get<CHand>().entityID);
+							hand->get<CTransform>().pos -= entityTransform.velocity;
+							if (e->get<CHand>().weaponID >= 0)
+							{
+								auto weapon = m_entityManager.getEntity(e->get<CHand>().weaponID);
+								weapon->get<CTransform>().pos -= entityTransform.velocity;
+							}
+						}
 					}
 				}
 			}
@@ -684,6 +798,33 @@ void Scene_Home_Map::displayEntityData(std::shared_ptr<Entity> e)
 			ImGui::Text(("Block Move: " + std::to_string(e->get<CBoundingBox>().blockMove)).c_str());
 			ImGui::SameLine();
 			ImGui::Text(("Block Vision: " + std::to_string(e->get<CBoundingBox>().blockVision)).c_str());
+		}
+		else if (component == "CFollowPlayer")
+		{
+			ImGui::SeparatorText("Follow Player");
+			ImGui::Text(("Home Position X: " + std::to_string(e->get<CFollowPlayer>().home.x) + " ").c_str());
+			ImGui::SameLine();
+			ImGui::Text(("Y: " + std::to_string(e->get<CFollowPlayer>().home.y)).c_str());
+
+			ImGui::Text(("Speed: " + std::to_string(e->get<CFollowPlayer>().speed)).c_str());
+		}
+		else if (component == "CPatrol")
+		{
+			ImGui::SeparatorText("Patrol");
+			ImGui::Text(("Current Position Index: " + std::to_string(e->get<CPatrol>().currentPosition)).c_str());
+
+			ImGui::Indent(20.f);
+			for (size_t i = 0; i < e->get<CPatrol>().positions.size(); ++i)
+			{
+				ImGui::Text(("Position " + std::to_string(i) + ": ").c_str());
+				ImGui::SameLine();
+				ImGui::Text(("X: " + std::to_string(e->get<CPatrol>().positions[i].x) + " ").c_str());
+				ImGui::SameLine();
+				ImGui::Text(("Y: " + std::to_string(e->get<CPatrol>().positions[i].y)).c_str());
+			}
+			ImGui::Unindent(20.f);
+
+			ImGui::Text(("Speed: " + std::to_string(e->get<CPatrol>().speed)).c_str());
 		}
 		else if (component == "CDraggable")
 		{
@@ -1062,6 +1203,30 @@ void Scene_Home_Map::sRender()
 				if (!box.blockMove && !box.blockVision) { rect.setOutlineColor(sf::Color::Magenta); }
 				rect.setOutlineThickness(1);
 				m_game->window().draw(rect);
+			}
+
+			if (e->has<CPatrol>())
+			{
+				auto& patrol = e->get<CPatrol>().positions;
+				for (size_t p = 0; p < patrol.size(); p++)
+				{
+					dot.setPosition(patrol[p].x, patrol[p].y);
+					m_game->window().draw(dot);
+				}
+			}
+
+			if (e->has<CFollowPlayer>())
+			{
+				sf::VertexArray lines(sf::LinesStrip, 2);
+				lines[0].position.x = e->get<CTransform>().pos.x;
+				lines[0].position.y = e->get<CTransform>().pos.y;
+				lines[0].color = sf::Color::Black;
+				lines[1].position.x = player()->get<CTransform>().pos.x;
+				lines[1].position.y = player()->get<CTransform>().pos.y;
+				lines[1].color = sf::Color::Black;
+				m_game->window().draw(lines);
+				dot.setPosition(e->get<CFollowPlayer>().home.x, e->get<CFollowPlayer>().home.y);
+				m_game->window().draw(dot);
 			}
 		}
 	}

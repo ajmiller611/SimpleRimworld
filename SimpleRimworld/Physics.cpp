@@ -59,11 +59,11 @@ Intersect Physics::LineIntersect(const Vec2& a, const Vec2& b, const Vec2& c, co
 
 bool Physics::EntityIntersect(const Vec2& a, const Vec2& b, std::shared_ptr<Entity> e)
 {
-	sf::FloatRect globalBounds = e->get<CAnimation>().animation.getSprite().getGlobalBounds();
-	Vec2 topLeft = Vec2(globalBounds.left, globalBounds.top);
-	Vec2 topRight = Vec2(globalBounds.left + globalBounds.width, globalBounds.top);
-	Vec2 bottomLeft = Vec2(globalBounds.left, globalBounds.top + globalBounds.height);
-	Vec2 bottomRight = Vec2(globalBounds.left + globalBounds.width, globalBounds.top + globalBounds.height);
+	auto& boundingBox = e->get<CBoundingBox>();
+	Vec2 topLeft = Vec2(boundingBox.pos.x - boundingBox.halfSize.x, boundingBox.pos.y - boundingBox.halfSize.y);
+	Vec2 topRight = Vec2(boundingBox.pos.x + boundingBox.halfSize.x, boundingBox.pos.y - boundingBox.halfSize.y);
+	Vec2 bottomLeft = Vec2(boundingBox.pos.x - boundingBox.halfSize.x, boundingBox.pos.y + boundingBox.halfSize.y);
+	Vec2 bottomRight = Vec2(boundingBox.pos.x + boundingBox.halfSize.x, boundingBox.pos.y + boundingBox.halfSize.y);
 
 		 if (LineIntersect(a, b, topLeft, topRight).intersected)		{ return true; }
 	else if (LineIntersect(a, b, topRight, bottomRight).intersected)	{ return true; }
