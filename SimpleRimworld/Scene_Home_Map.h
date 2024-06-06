@@ -3,14 +3,14 @@
 #include "Scene.h"
 #include "variant"
 
-typedef std::vector<std::variant<CAnimation, CBoundingBox>> WeaponsVec;
+typedef std::vector<std::variant<CAnimation, CBoundingBox, CDamage>> WeaponsVec;
 typedef std::map<std::string, WeaponsVec>	 WeaponsMap;
 
 class Scene_Home_Map : public Scene
 {
 	struct PlayerConfig
 	{
-		float X = 0, Y = 0, CX = 0, CY = 0, SPEED = 0, HEALTH = 0;
+		float GX = 0, GY = 0, SX = 0, SY = 0, SPEED = 0, HEALTH = 0;
 		std::string WEAPON;
 	};
 

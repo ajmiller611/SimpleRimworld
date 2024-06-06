@@ -82,7 +82,7 @@ void Scene_Home_Map::loadLevel(const std::string& filename)
 		else if (str == "Weapon")
 		{
 			// Variant allows this vector to hold multiple components even though they are different data types.
-			std::vector<std::variant<CAnimation, CBoundingBox>> weaponVec;
+			std::vector<std::variant<CAnimation, CBoundingBox, CDamage>> weaponVec;
 
 			file >> str;
 			CAnimation anim(m_game->assets().getAnimation(str), true);
@@ -92,6 +92,11 @@ void Scene_Home_Map::loadLevel(const std::string& filename)
 			file >> bbOffsetX >> bbOffsetY >> bbSizeX >> bbSizeY;
 			CBoundingBox bb(Vec2(0, 0), Vec2(bbOffsetX, bbOffsetY), Vec2(bbSizeX, bbSizeY));
 			weaponVec.push_back(bb);
+
+			float damage;
+			file >> damage;
+			CDamage dmg(damage);
+			weaponVec.push_back(dmg);
 
 			// "str" still holds the animation name of the weapon which will be used as the key to identifiy weapons.
 			m_weaponsMap[str] = weaponVec;
@@ -148,6 +153,12 @@ void Scene_Home_Map::loadLevel(const std::string& filename)
 				entity->add<CPatrol>(positions, speed);
 			}
 		}
+		else if (str == "Player")
+		{
+			file >> m_playerConfig.GX >> m_playerConfig.GY
+				>> m_playerConfig.SX >> m_playerConfig.SY
+				>> m_playerConfig.SPEED >> m_playerConfig.HEALTH >> m_playerConfig.WEAPON;
+		}
 		else { std::cout << "Invalid entity type: " + str << "\n"; }
 	}
 }
@@ -160,9 +171,12 @@ std::shared_ptr<Entity> Scene_Home_Map::player()
 void Scene_Home_Map::spawnPlayer()
 {
 	auto entity = m_entityManager.addEntity("Player");
+	m_entityManager.update();
 	entity->add<CAnimation>(m_game->assets().getAnimation("GreenCharacter"), true);
-	entity->add<CTransform>(Vec2(32, 224));
-	entity->add<CBoundingBox>(entity->get<CTransform>().pos, Vec2(0, 0), Vec2(40, 40));
+	float x = m_playerConfig.GX * m_gridSize.x + (m_gridSize.x / 2);
+	float y = m_playerConfig.GY * m_gridSize.y + (m_gridSize.y / 2);
+	entity->add<CTransform>(Vec2(x, y));
+	entity->add<CBoundingBox>(entity->get<CTransform>().pos, Vec2(0, 0), Vec2(m_playerConfig.SX, m_playerConfig.SY));
 	entity->add<CInput>();
 
 	auto hand = m_entityManager.addEntity("Decoration");
@@ -171,6 +185,7 @@ void Scene_Home_Map::spawnPlayer()
 
 	entity->add<CHand>(hand->id(), Vec2(28, 16));
 	entity->add<CState>("StandUp");
+	entity->add<CHealth>(m_playerConfig.HEALTH, m_playerConfig.HEALTH);
 }
 
 void Scene_Home_Map::spawnWeapon(std::shared_ptr<Entity> e, const std::string& name)
@@ -292,25 +307,25 @@ void Scene_Home_Map::sMovement()
 
 	if (pInput.up)
 	{
-		pVelocity.y -= 3;
+		pVelocity.y -= m_playerConfig.SPEED;
 		pTransform.facing = Vec2(0, -1);
 		if (pInput.canAttack) { pState.state = "RunUp"; }
 	}
 	else if (pInput.down)
 	{
-		pVelocity.y += 3;
+		pVelocity.y += m_playerConfig.SPEED;
 		pTransform.facing = Vec2(0, 1);
 		if (pInput.canAttack) { pState.state = "RunDown"; }
 	}
 	else if (pInput.left)
 	{
-		pVelocity.x -= 3;
+		pVelocity.x -= m_playerConfig.SPEED;
 		pTransform.facing = Vec2(-1, 0);
 		if (pInput.canAttack) { pState.state = "RunLeft"; }
 	}
 	else if (pInput.right)
 	{
-		pVelocity.x += 3;
+		pVelocity.x += m_playerConfig.SPEED;
 		pTransform.facing = Vec2(1, 0);
 		if (pInput.canAttack) { pState.state = "RunRight"; }
 	}
@@ -454,6 +469,20 @@ void Scene_Home_Map::sStatus()
 			player()->get<CHand>().weaponID = -1;
 		}
 	}
+
+	if (player()->has<CInvincibility>())
+	{
+		player()->get<CAnimation>().animation.getSprite().setColor(sf::Color(255, 255, 255, 125));
+		if (player()->get<CInvincibility>().iframes > 0)
+		{
+			player()->get<CInvincibility>().iframes--;
+		}
+		if (player()->get<CInvincibility>().iframes == 0)
+		{
+			player()->remove<CInvincibility>();
+			player()->get<CAnimation>().animation.getSprite().setColor(sf::Color());
+		}
+	}
 }
 
 Scene_Home_Map::Collision Scene_Home_Map::collided(std::shared_ptr<Entity> a, std::shared_ptr<Entity> b)
@@ -560,6 +589,36 @@ void Scene_Home_Map::sCollision()
 				}
 			}
 		}
+
+		if (e->tag() == "Enemy")
+		{
+			std::shared_ptr<Entity> weapon;
+			Collision weaponResult;
+
+			// Check to see if the enemy has a weapon
+			if (e->get<CHand>().weaponID >= 0)
+			{
+				weapon = m_entityManager.getEntity(e->get<CHand>().weaponID);
+				weaponResult = collided(player(), weapon);
+			}
+
+			Collision result = collided(player(), e);
+			if (result.collided || weaponResult.collided)
+			{
+				if (e->get<CHand>().weaponID >= 0 && !player()->has<CInvincibility>())
+				{
+					player()->get<CHealth>().current -= weapon->get<CDamage>().damage;
+					player()->add<CInvincibility>(30);
+					if (player()->get<CHealth>().current <= 0)
+					{
+						// destroy the player entity and the hand entity associated with it
+						player()->destroy();
+						m_entityManager.getEntity(player()->get<CHand>().entityID)->destroy();
+						spawnPlayer();
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -583,7 +642,7 @@ void Scene_Home_Map::sDoAction(const Action& action)
 				{
 					if (player()->get<CInput>().canAttack)
 					{
-						spawnWeapon(player(), "WeaponLongsword");
+						spawnWeapon(player(), m_playerConfig.WEAPON);
 						auto weapon = m_entityManager.getEntity(player()->get<CHand>().weaponID);
 						weapon->add<CLifespan>(10, (int)m_currentFrame);
 						if (player()->get<CTransform>().facing.x != 0)

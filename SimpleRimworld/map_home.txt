@@ -238,21 +238,22 @@ Decoration TilesCracked 19 8
 Tile FloorWallDamaged 19 9 1248 587.5 0 -20.5 64 23 1 1
 Tile FloorDragon 19 10 1248.5 673.5 0.5 1.5 43 45 1 0
 Decoration FloorPuddle 19 11 
-Weapon WeaponArrow 0 -16 10 10
-Weapon WeaponAxe -5 -15 25 25
-Weapon WeaponAxeBlades 0 -13 32 26
-Weapon WeaponAxeDouble 0 -13 38 26
-Weapon WeaponAxeLarge 0 -8 40 36
-Weapon WeaponBow 0 0 56 18
-Weapon WeaponBowArrow 0 0 56 18
-Weapon WeaponDagger 0 -6 14 26
-Weapon WeaponHammer 0 -17 30 20
-Weapon WeaponLongsword 0 -8 16 40
-Weapon WeaponPole 0 -22 12 14
-Weapon WeaponSpear 0 -18 14 20
-Weapon WeaponStaff 0 -12 22 22
-Weapon WeaponSword 0 -7 16 30
-Weapon ShieldCurved 1 0 50 14
-Weapon ShieldStraight 1 0 50 14
+Weapon WeaponArrow 0 -16 10 10 1
+Weapon WeaponAxe -5 -15 25 25 2
+Weapon WeaponAxeBlades 0 -13 32 26 2
+Weapon WeaponAxeDouble 0 -13 38 26 2
+Weapon WeaponAxeLarge 0 -8 40 36 3
+Weapon WeaponBow 0 0 56 18 0
+Weapon WeaponBowArrow 0 0 56 18 0
+Weapon WeaponDagger 0 -6 14 26 1
+Weapon WeaponHammer 0 -17 30 20 3
+Weapon WeaponLongsword 0 -8 16 40 3
+Weapon WeaponPole 0 -22 12 14 2
+Weapon WeaponSpear 0 -18 14 20 2
+Weapon WeaponStaff 0 -12 22 22 1
+Weapon WeaponSword 0 -7 16 30 2
+Weapon ShieldCurved 1 0 50 14 0
+Weapon ShieldStraight 1 0 50 14 0
 Enemy RedCharacter 8 6 40 40 5 WeaponAxe Patrol 2 4 8 6 8 2 6 2 6 6
 Enemy RedCharacter 14 10 40 40 5 WeaponAxeDouble Follow 2
+Player 0 3 40 40 3 10 WeaponLongsword
