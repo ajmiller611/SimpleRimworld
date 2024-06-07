@@ -29,9 +29,6 @@ void EntityManager::removeDeadEntities(EntityVec& vec)
 	// to look at the Entity isActive boolean variable.
 	vec.erase(std::remove_if(vec.begin(), vec.end(),
 		[](std::shared_ptr<Entity> object) {return !(object->isActive()); }), vec.end());
-
-	// Keep the total entities count in sync with the index of the entities vector
-	if (m_entities.size() != m_totalEntities) { m_totalEntities--; }
 }
 
 std::shared_ptr<Entity> EntityManager::addEntity(const std::string& tag)
@@ -58,5 +55,9 @@ const std::map<std::string, EntityVec>& EntityManager::getEntityMap()
 
 std::shared_ptr<Entity> EntityManager::getEntity(size_t id)
 {
-	return m_entities.at(id);
+	for (auto& e : m_entities)
+	{
+		if (e->id() == id) { return e; }
+	}
+	
 }

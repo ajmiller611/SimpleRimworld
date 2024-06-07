@@ -618,6 +618,26 @@ void Scene_Home_Map::sCollision()
 					}
 				}
 			}
+
+			std::shared_ptr<Entity> playerWeapon;
+			Collision playerWeaponResult;
+
+			if (player()->get<CHand>().weaponID >= 0)
+			{
+				playerWeapon = m_entityManager.getEntity(player()->get<CHand>().weaponID);
+				playerWeaponResult = collided(playerWeapon, e);
+			}
+			if (playerWeaponResult.collided)
+			{
+				e->get<CHealth>().current -= playerWeapon->get<CDamage>().damage;
+				playerWeapon->remove<CDamage>();
+				if (e->get<CHealth>().current == 0)
+				{
+					e->destroy();
+					m_entityManager.getEntity(e->get<CHand>().entityID)->destroy();
+					m_entityManager.getEntity(e->get<CHand>().weaponID)->destroy();
+				}
+			}
 		}
 	}
 }
