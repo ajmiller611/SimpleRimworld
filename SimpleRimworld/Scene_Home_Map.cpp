@@ -588,6 +588,46 @@ void Scene_Home_Map::sCollision()
 					}
 				}
 			}
+
+			if (tile->get<CAnimation>().animation.getName() == "FloorTrap")
+			{
+				Collision result = collided(player(), tile);
+				if (result.collided)
+				{
+					if (!player()->has<CInvincibility>())
+					{
+						player()->get<CHealth>().current -= 1;
+						player()->add<CInvincibility>(30);
+					}
+					if (player()->get<CHealth>().current <= 0)
+					{
+						// destroy the player entity and the hand entity associated with it
+						player()->destroy();
+						m_entityManager.getEntity(player()->get<CHand>().entityID)->destroy();
+						spawnPlayer();
+					}
+				}
+			}
+
+			if (tile->get<CAnimation>().animation.getName() == "FloorCampfire")
+			{
+				Collision result = collided(player(), tile);
+				if (result.collided)
+				{
+					if (!player()->has<CInvincibility>())
+					{
+						player()->get<CHealth>().current -= 1;
+						player()->add<CInvincibility>(30);
+					}
+					if (player()->get<CHealth>().current <= 0)
+					{
+						// destroy the player entity and the hand entity associated with it
+						player()->destroy();
+						m_entityManager.getEntity(player()->get<CHand>().entityID)->destroy();
+						spawnPlayer();
+					}
+				}
+			}
 		}
 
 		if (e->tag() == "Enemy")
